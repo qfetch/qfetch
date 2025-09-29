@@ -10,7 +10,12 @@
 		"enabled": true
 	},
 	"linter": {
-		"enabled": true
+		"enabled": true,
+		"rules": {
+			"correctness": {
+				"noUndeclaredDependencies": "error"
+			}
+		}
 	},
 	"assist": {
 		"enabled": true,

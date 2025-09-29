@@ -28,8 +28,7 @@ jobs:
         with:
           path: |
             .turbo
-            packages/${{ inputs.package_path }}/.turbo
-          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-turbo-
 
@@ -50,4 +49,7 @@ jobs:
 
       - name: Build
         run: pnpm build --filter=${{ inputs.package_npm_name }}
+
+      - name: Test
+        run: pnpm test --filter=${{ inputs.package_npm_name }}
 

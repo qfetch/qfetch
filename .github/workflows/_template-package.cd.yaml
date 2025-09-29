@@ -35,8 +35,7 @@ jobs:
         with:
           path: |
             .turbo
-            packages/${{ inputs.package_path }}/.turbo
-          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-turbo-
 
@@ -77,8 +76,7 @@ jobs:
         with:
           path: |
             .turbo
-            packages/${{ inputs.package_path }}/.turbo
-          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-turbo-
 

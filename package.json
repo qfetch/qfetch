@@ -1,27 +1,29 @@
 {
 	"name": "@qfetch/qfetch",
-	"private": true,
 	"version": "0.0.0",
-	"packageManager": "pnpm@10.15.1",
-	"engines": {
-		"node": ">= 22"
-	},
-	"scripts": {
-		"generate": "turbo gen",
-		"dev": "turbo watch build check-types test",
-		"build": "turbo build",
-		"style": "turbo style",
-		"check-types": "turbo check-types",
-		"test": "turbo test",
-		"repo:style": "biome check ."
-	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.4",
 		"@turbo/gen": "2.5.8",
 		"@types/node": "24.5.2",
 		"rolldown": "1.0.0-beta.40",
+		"syncpack": "13.0.4",
 		"tsdown": "0.15.4",
 		"turbo": "2.5.8",
 		"typescript": "5.9.2"
+	},
+	"engines": {
+		"node": ">= 22"
+	},
+	"packageManager": "pnpm@10.15.1",
+	"private": true,
+	"scripts": {
+		"build": "turbo build",
+		"check-types": "turbo check-types",
+		"dev": "turbo watch build check-types test",
+		"generate": "turbo gen",
+		"repo:style": "biome check .",
+		"repo:syncpack:format": "syncpack format -i \"\\t\"",
+		"style": "turbo style",
+		"test": "turbo test"
 	}
 }
