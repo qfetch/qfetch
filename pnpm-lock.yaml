@@ -30,29 +30,17 @@ importers:
         specifier: 24.5.2
         version: 24.5.2
       rolldown:
-        specifier: 1.0.0-beta.40
+        specifier: 'catalog:'
         version: 1.0.0-beta.40
       syncpack:
         specifier: 13.0.4
         version: 13.0.4(typescript@5.9.2)
       tsdown:
-        specifier: 0.15.4
+        specifier: 'catalog:'
         version: 0.15.4(typescript@5.9.2)
       turbo:
         specifier: 2.5.8
         version: 2.5.8
-      typescript:
-        specifier: 5.9.2
-        version: 5.9.2
-
-  packages/core:
-    devDependencies:
-      rolldown:
-        specifier: 'catalog:'
-        version: 1.0.0-beta.40
-      tsdown:
-        specifier: 'catalog:'
-        version: 0.15.4(typescript@5.9.2)
       typescript:
         specifier: 'catalog:'
         version: 5.9.2
