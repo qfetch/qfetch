@@ -1,0 +1,29 @@
+{
+"name": "@qfetch/middleware-{{kebabCase middlewareName}}",
+"private": false,
+"version": "0.0.0-alpha.1",
+"type": "module",
+"main": "./dist/index.cjs",
+"module": "./dist/index.js",
+"types": "./dist/index.d.ts",
+"exports": {
+".": {
+"require": "./dist/index.cjs",
+"import": "./dist/index.js",
+"types": "./dist/index.d.ts"
+},
+"./package.json": "./package.json"
+},
+"scripts": {
+"build": "tsdown",
+"check-types": "tsc --noEmit",
+"test": "node --test",
+"lint": "biome check .",
+"lint:fix": "biome check . --write",
+"format": "biome format .",
+"format:fix": "biome format . --write"
+},
+"devDependencies": {
+"@qfetch/core": "workspace:*"
+}
+}

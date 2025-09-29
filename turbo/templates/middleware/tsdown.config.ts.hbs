@@ -1,0 +1,11 @@
+import { defineConfig } from "tsdown";
+
+export default defineConfig([
+	{
+		globalName: "QFM_{{camelCase middlewareName}}",
+		platform: "neutral",
+		target: "es2020",
+		format: ["cjs", "esm", "iife"],
+		sourcemap: true,
+	}
+]);

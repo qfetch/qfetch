@@ -1,0 +1,16 @@
+import type { Middleware } from "@qfetch/core";
+
+type FetchParameters = Parameters<typeof fetch>;
+type FetchReturn = Awaited<ReturnType<typeof fetch>>;
+
+export type {{pascalCase middlewareName}}Options = {};
+
+export const with{{pascalCase middlewareName}}: Middleware<{{pascalCase middlewareName}}Options | undefined> = (
+	opts = {},
+) => {
+	const {} = opts;
+
+	return (next) => async (input, init) => {
+		return next(input, init);
+	};
+};
