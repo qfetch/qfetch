@@ -90,8 +90,11 @@ jobs:
       - name: Install dependencies
         run: pnpm i --filter=${{ inputs.package_npm_name }} # Re-install dependencies for publish job
 
+      - name: Build package
+        run: pnpm build --filter=${{ inputs.package_npm_name }}
+
       - name: Publish to npm registry
-        run: pnpm publish --filter=${{ inputs.package_npm_name }} --access public
+        run: pnpm --filter=${{ inputs.package_npm_name }} publish --access public --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
