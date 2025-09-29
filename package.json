@@ -10,6 +10,7 @@
 		"generate": "turbo gen",
 		"dev": "turbo watch build check-types test",
 		"build": "turbo build",
+		"style": "turbo style",
 		"check-types": "turbo check-types",
 		"test": "turbo test",
 		"repo:style": "biome check ."

@@ -8,6 +8,9 @@
 		"check-types": {
 			"dependsOn": ["^check-types"]
 		},
+		"style": {
+			"dependsOn": ["^style"]
+		},
 		"test": {
 			"dependsOn": ["^test"]
 		}
