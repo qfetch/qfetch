@@ -1,0 +1,99 @@
+on:
+  workflow_call:
+    inputs:
+      package_path:
+        description: "The path of the package in packages folder (e.g. core)"
+        required: true
+        type: string
+      package_npm_name:
+        description: "The npm package name (e.g. @qfetch/core)"
+        required: true
+        type: string
+      package_tag_name:
+        description: "The release tag name for the package"
+        required: true
+        type: string
+    secrets:
+      NPM_TOKEN:
+        required: true
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            packages/${{ inputs.package_path }}/.turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: "package.json"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm i --filter=${{ inputs.package_npm_name }}
+
+      - name: Build package
+        run: pnpm build --filter=${{ inputs.package_npm_name }}
+
+      - name: Zip build artifact
+        run: zip -r ${{ inputs.package_path }}-build.zip packages/${{ inputs.package_path }}/dist
+
+      - name: Upload build artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ inputs.package_tag_name }} ${{ inputs.package_path }}-build.zip
+
+  publish-npm:
+    runs-on: ubuntu-24.04
+    needs: build-and-upload # Ensure publish only runs after build and upload
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            packages/${{ inputs.package_path }}/.turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: "package.json"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm i --filter=${{ inputs.package_npm_name }} # Re-install dependencies for publish job
+
+      - name: Publish to npm registry
+        run: pnpm publish --filter=${{ inputs.package_npm_name }} --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+

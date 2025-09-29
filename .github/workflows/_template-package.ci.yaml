@@ -1,0 +1,53 @@
+on:
+  workflow_call:
+    inputs:
+      package_path:
+        description: "The path of the package in packages folder (e.g. core)"
+        required: true
+        type: string
+      package_npm_name:
+        description: "The npm package name (e.g. @qfetch/core)"
+        required: true
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: |
+            .turbo
+            packages/${{ inputs.package_path }}/.turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: "package.json"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm i --filter=${{ inputs.package_npm_name }}
+
+      - name: Style
+        run: pnpm style --filter=${{ inputs.package_npm_name }}
+
+      - name: Check types
+        run: pnpm check-types --filter=${{ inputs.package_npm_name }}
+
+      - name: Build
+        run: pnpm build --filter=${{ inputs.package_npm_name }}
+
