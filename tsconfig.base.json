@@ -3,11 +3,7 @@
 		"noEmit": true,
 		"target": "esnext",
 		"module": "nodenext",
-		"lib": [
-			"esnext",
-			"dom",
-			"webworker"
-		],
+		"lib": ["esnext", "dom", "webworker"],
 		"strict": true,
 		"exactOptionalPropertyTypes": true,
 		"declaration": true,
@@ -18,6 +14,7 @@
 		"erasableSyntaxOnly": true,
 		"verbatimModuleSyntax": true,
 		"rewriteRelativeImportExtensions": true,
-		"forceConsistentCasingInFileNames": true
+		"forceConsistentCasingInFileNames": true,
+		"incremental": true
 	}
 }

@@ -3,16 +3,8 @@
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
-		"useIgnoreFile": true
-	},
-	"files": {
-		"includes": [
-			"turbo/**/*",
-			"packages/**/*",
-			"packages/**/src/**/*",
-			"packages/**/examples/**/*"
-		],
-		"ignoreUnknown": false
+		"useIgnoreFile": true,
+		"defaultBranch": "main"
 	},
 	"formatter": {
 		"enabled": true
@@ -28,24 +20,13 @@
 					"level": "on",
 					"options": {
 						"groups": [
-							[
-								":URL:",
-								":NODE:",
-								":BUN:"
-							],
+							[":URL:", ":NODE:", ":BUN:"],
 							":BLANK_LINE:",
-							[
-								":PACKAGE:",
-								":PACKAGE_WITH_PROTOCOL:"
-							],
+							[":PACKAGE:", ":PACKAGE_WITH_PROTOCOL:"],
 							":BLANK_LINE:",
-							[
-								":ALIAS:"
-							],
+							[":ALIAS:"],
 							":BLANK_LINE:",
-							[
-								":PATH:"
-							]
+							[":PATH:"]
 						]
 					}
 				}

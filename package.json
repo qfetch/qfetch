@@ -11,7 +11,8 @@
 		"dev": "turbo watch build check-types test",
 		"build": "turbo build",
 		"check-types": "turbo check-types",
-		"test": "turbo test"
+		"test": "turbo test",
+		"repo:style": "biome check ."
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.4",
