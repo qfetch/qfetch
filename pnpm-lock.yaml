@@ -45,6 +45,18 @@ importers:
         specifier: 'catalog:'
         version: 5.9.2
 
+  packages/core:
+    devDependencies:
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.40
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.15.4(typescript@5.9.2)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.2
+
 packages:
 
   '@babel/code-frame@7.27.1':

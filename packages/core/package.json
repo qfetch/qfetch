@@ -1,0 +1,52 @@
+{
+	"name": "@qfetch/core",
+	"description": "Core framework for composable fetch middlewares",
+	"version": "0.0.0-alpha.0",
+	"author": "vabatta",
+	"bugs": "https://github.com/qfetch/qfetch/issues",
+	"devDependencies": {
+		"rolldown": "catalog:",
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist"
+	],
+	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/core#readme",
+	"keywords": [
+		"client",
+		"composable",
+		"fetch",
+		"http",
+		"middleware",
+		"typescript"
+	],
+	"license": "MIT",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/qfetch/qfetch.git",
+		"directory": "packages/core"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check-types": "tsc --noEmit",
+		"style": "biome check .",
+		"test": "node --test"
+	},
+	"type": "module",
+	"types": "./dist/index.d.ts"
+}
