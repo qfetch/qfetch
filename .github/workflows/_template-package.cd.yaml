@@ -94,7 +94,7 @@ jobs:
         run: pnpm build --filter=${{ inputs.package_npm_name }}
 
       - name: Publish to npm registry
-        run: pnpm --filter=${{ inputs.package_npm_name }} publish --access public --dry-run
+        run: pnpm --filter=${{ inputs.package_npm_name }} publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

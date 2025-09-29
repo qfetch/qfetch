@@ -1,7 +1,7 @@
 {
 	"name": "@qfetch/core",
 	"description": "Core framework for composable fetch middlewares",
-	"version": "0.0.0-alpha.0",
+	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
 	"devDependencies": {
