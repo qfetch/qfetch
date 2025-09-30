@@ -8,7 +8,7 @@ export type FetchFunction = typeof fetch;
  * @param next - The next fetch function in the middleware chain
  * @returns A new fetch function with the middleware applied
  */
-export type MiddlewareExecutor = (next: FetchFunction) => FetchFunction;
+export type FetchExecutor = (next: FetchFunction) => FetchFunction;
 
 /**
  * A middleware factory that creates a MiddlewareExecutor
@@ -36,10 +36,10 @@ export type MiddlewareExecutor = (next: FetchFunction) => FetchFunction;
  * ```
  */
 export type Middleware<T = never> = [T] extends [never]
-	? () => MiddlewareExecutor
+	? () => FetchExecutor
 	: undefined extends T
-		? (opts?: T) => MiddlewareExecutor
-		: (opts: T) => MiddlewareExecutor;
+		? (opts?: T) => FetchExecutor
+		: (opts: T) => FetchExecutor;
 
 /**
  * Composes multiple middleware executors into a single fetch function,
@@ -61,7 +61,7 @@ export type Middleware<T = never> = [T] extends [never]
  * // retries -> logs
  * ```
  */
-export const compose = (...middlewares: MiddlewareExecutor[]) => {
+export const compose = (...middlewares: FetchExecutor[]): FetchExecutor => {
 	return (baseFetch: FetchFunction): FetchFunction => {
 		// Build the chain from right to left (last middleware wraps base fetch)
 		return middlewares.reduce((next, current) => current(next), baseFetch);
@@ -88,7 +88,7 @@ export const compose = (...middlewares: MiddlewareExecutor[]) => {
  * // logs -> retries
  * ```
  */
-export const pipeline = (...middlewares: MiddlewareExecutor[]) => {
+export const pipeline = (...middlewares: FetchExecutor[]): FetchExecutor => {
 	return (baseFetch: FetchFunction): FetchFunction => {
 		// Build the chain from left to right (first middleware wraps base fetch)
 		return middlewares.reduceRight((next, current) => current(next), baseFetch);
