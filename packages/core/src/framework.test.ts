@@ -1,20 +1,20 @@
 import { describe, it, type TestContext } from "node:test";
 
-import { compose, type MiddlewareExecutor, pipeline } from "./framework.ts";
+import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 
 describe("framework", () => {
 	describe("compose", () => {
 		it("applies middleware in right-to-left order", async (ctx: TestContext) => {
 			const calls: string[] = [];
 
-			const mw1: MiddlewareExecutor = (next) => async (input, init) => {
+			const mw1: FetchExecutor = (next) => async (input, init) => {
 				calls.push("mw1-before");
 				const res = await next(input, init);
 				calls.push("mw1-after");
 				return res;
 			};
 
-			const mw2: MiddlewareExecutor = (next) => async (input, init) => {
+			const mw2: FetchExecutor = (next) => async (input, init) => {
 				calls.push("mw2-before");
 				const res = await next(input, init);
 				calls.push("mw2-after");
@@ -50,7 +50,7 @@ describe("framework", () => {
 				return new Response("ok");
 			});
 
-			const passthrough: MiddlewareExecutor = (next) => (input, init) =>
+			const passthrough: FetchExecutor = (next) => (input, init) =>
 				next(input, init);
 
 			const qfetch = compose(passthrough)(baseFetch);
@@ -74,14 +74,14 @@ describe("framework", () => {
 		it("applies middleware in left-to-right order", async (ctx: TestContext) => {
 			const calls: string[] = [];
 
-			const mw1: MiddlewareExecutor = (next) => async (input, init) => {
+			const mw1: FetchExecutor = (next) => async (input, init) => {
 				calls.push("mw1-before");
 				const res = await next(input, init);
 				calls.push("mw1-after");
 				return res;
 			};
 
-			const mw2: MiddlewareExecutor = (next) => async (input, init) => {
+			const mw2: FetchExecutor = (next) => async (input, init) => {
 				calls.push("mw2-before");
 				const res = await next(input, init);
 				calls.push("mw2-after");
@@ -117,7 +117,7 @@ describe("framework", () => {
 				return new Response("ok");
 			});
 
-			const passthrough: MiddlewareExecutor = (next) => (input, init) =>
+			const passthrough: FetchExecutor = (next) => (input, init) =>
 				next(input, init);
 
 			const qfetch = pipeline(passthrough)(baseFetch);
