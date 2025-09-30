@@ -4,6 +4,7 @@ on:
       - main
 
 permissions:
+  id-token: write
   contents: write
   pull-requests: write
 
@@ -43,4 +44,3 @@ jobs:
       package_tag_name: ${{ needs.release-please.outputs['packages/core--tag_name'] }}
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-

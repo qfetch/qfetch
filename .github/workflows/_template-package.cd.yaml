@@ -16,6 +16,8 @@ on:
     secrets:
       NPM_TOKEN:
         required: true
+      # JSR_TOKEN:
+      #   required: true
 
 jobs:
   build-and-upload:
@@ -47,24 +49,25 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        run: pnpm i --filter=${{ inputs.package_npm_name }}
+        run: pnpm install --filter=${{ inputs.package_npm_name }}
 
       - name: Build package
         run: pnpm build --filter=${{ inputs.package_npm_name }}
 
-      - name: Zip build artifact
-        run: zip -r ${{ inputs.package_path }}-build.zip packages/${{ inputs.package_path }}/dist
+      - name: Pack package
+        run: pnpm pack --filter=${{ inputs.package_npm_name }} --out=${{ inputs.package_path }}-build.tgz
 
       - name: Upload build artifact
+        run: gh release upload ${{ inputs.package_tag_name }} ${{ inputs.package_path }}-build.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ inputs.package_tag_name }} ${{ inputs.package_path }}-build.zip
 
   publish-npm:
     runs-on: ubuntu-24.04
-    needs: build-and-upload # Ensure publish only runs after build and upload
+    needs: build-and-upload
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -88,13 +91,31 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        run: pnpm i --filter=${{ inputs.package_npm_name }} # Re-install dependencies for publish job
+        run: pnpm install --filter=${{ inputs.package_npm_name }}
 
       - name: Build package
         run: pnpm build --filter=${{ inputs.package_npm_name }}
 
       - name: Publish to npm registry
-        run: pnpm --filter=${{ inputs.package_npm_name }} publish --access public
+        run: pnpm publish --filter=${{ inputs.package_npm_name }} --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+  publish-jsr:
+    runs-on: ubuntu-24.04
+    needs: build-and-upload
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Publish to jsr registry
+        run: pnpx jsr publish
+        working-directory: packages/${{ inputs.package_path }}

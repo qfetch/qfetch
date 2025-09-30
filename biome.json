@@ -14,6 +14,9 @@
 		"rules": {
 			"correctness": {
 				"noUndeclaredDependencies": "error"
+			},
+			"nursery": {
+				"useExplicitType": "error"
 			}
 		}
 	},
@@ -37,5 +40,17 @@
 				}
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.test.ts"],
+			"linter": {
+				"rules": {
+					"nursery": {
+						"useExplicitType": "off"
+					}
+				}
+			}
+		}
+	]
 }
