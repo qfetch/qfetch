@@ -1,3 +1,5 @@
+name: Packages CD
+
 on:
   push:
     branches:
@@ -8,11 +10,9 @@ permissions:
   contents: write
   pull-requests: write
 
-name: Packages CI
-
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       # You need to explicitly output the tag name and release_created for each package
       # This assumes your release-please-config.json and .release-please-manifest.json
@@ -39,8 +39,8 @@ jobs:
     uses: ./.github/workflows/_template-package.cd.yaml
     needs: release-please
     with:
-      package_path: core
-      package_npm_name: "@qfetch/core"
-      package_tag_name: ${{ needs.release-please.outputs['packages/core--tag_name'] }}
+      package_path: "packages/core"
+      package_name: "@qfetch/core"
+      package_tag: ${{ needs.release-please.outputs['packages/core--tag_name'] }}
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -2,15 +2,15 @@ on:
   workflow_call:
     inputs:
       package_path:
-        description: "The path of the package in packages folder (e.g. core)"
+        description: "The path of the package (e.g. packages/core)"
         required: true
         type: string
-      package_npm_name:
+      package_name:
         description: "The npm package name (e.g. @qfetch/core)"
         required: true
         type: string
-      package_tag_name:
-        description: "The release tag name for the package"
+      package_tag:
+        description: "The release tag for the package"
         required: true
         type: string
     secrets:
@@ -46,25 +46,25 @@ jobs:
         with:
           node-version-file: "package.json"
           cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        run: pnpm install --filter=${{ inputs.package_npm_name }}
+        run: pnpm install --filter=${{ inputs.package_name }}
 
       - name: Build package
-        run: pnpm build --filter=${{ inputs.package_npm_name }}
+        run: pnpm build --filter=${{ inputs.package_name }}
 
       - name: Pack package
-        run: pnpm pack --filter=${{ inputs.package_npm_name }} --out=${{ inputs.package_path }}-build.tgz
+        run: pnpm pack --filter=${{ inputs.package_name }} --out=build.tgz
 
       - name: Upload build artifact
-        run: gh release upload ${{ inputs.package_tag_name }} ${{ inputs.package_path }}-build.tgz
+        run: gh release upload ${{ inputs.package_tag }} build.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-npm:
     runs-on: ubuntu-24.04
     needs: build-and-upload
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -91,13 +91,13 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        run: pnpm install --filter=${{ inputs.package_npm_name }}
+        run: pnpm install --filter=${{ inputs.package_name }}
 
       - name: Build package
-        run: pnpm build --filter=${{ inputs.package_npm_name }}
+        run: pnpm build --filter=${{ inputs.package_name }}
 
       - name: Publish to npm registry
-        run: pnpm publish --filter=${{ inputs.package_npm_name }} --access public
+        run: pnpm publish --filter=${{ inputs.package_name }} --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -107,6 +107,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -118,4 +119,4 @@ jobs:
 
       - name: Publish to jsr registry
         run: pnpx jsr publish
-        working-directory: packages/${{ inputs.package_path }}
+        working-directory: ${{ inputs.package_path }}

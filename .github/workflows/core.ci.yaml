@@ -19,6 +19,5 @@ jobs:
     name: CI
     uses: ./.github/workflows/_template-package.ci.yaml
     with:
-      package_path: core
-      package_npm_name: "@qfetch/core"
-
+      package_path: "packages/core"
+      package_name: "@qfetch/core"

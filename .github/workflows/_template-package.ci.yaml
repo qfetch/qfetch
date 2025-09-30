@@ -2,10 +2,10 @@ on:
   workflow_call:
     inputs:
       package_path:
-        description: "The path of the package in packages folder (e.g. core)"
+        description: "The path of the package (e.g. packages/core)"
         required: true
         type: string
-      package_npm_name:
+      package_name:
         description: "The npm package name (e.g. @qfetch/core)"
         required: true
         type: string
@@ -39,17 +39,16 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm i --filter=${{ inputs.package_npm_name }}
+        run: pnpm i --filter=${{ inputs.package_name }}
 
       - name: Style
-        run: pnpm style --filter=${{ inputs.package_npm_name }}
+        run: pnpm style --filter=${{ inputs.package_name }}
 
       - name: Check types
-        run: pnpm check-types --filter=${{ inputs.package_npm_name }}
+        run: pnpm check-types --filter=${{ inputs.package_name }}
 
       - name: Build
-        run: pnpm build --filter=${{ inputs.package_npm_name }}
+        run: pnpm build --filter=${{ inputs.package_name }}
 
       - name: Test
-        run: pnpm test --filter=${{ inputs.package_npm_name }}
-
+        run: pnpm test --filter=${{ inputs.package_name }}
