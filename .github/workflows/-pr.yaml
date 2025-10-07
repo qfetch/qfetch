@@ -21,3 +21,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           wip: true
+        subjectPattern: ^(?![A-Z]).+$
+        scopes: |
+          main
+          gha
+          core
+          middleware-\S+
