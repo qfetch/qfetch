@@ -7,7 +7,7 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
 			{
 				type: "input",
 				name: "middlewareName",
-				message: "What is the middleware name?",
+				message: "What is the middleware name (without `with` prefix)?",
 			},
 		],
 		actions: [
