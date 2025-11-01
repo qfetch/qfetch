@@ -7,9 +7,6 @@ on:
       - edited
       - reopened
 
-permissions:
-  pull-requests: write
-
 jobs:
   title:
     runs-on: ubuntu-24.04
@@ -20,7 +17,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          wip: true
           subjectPattern: ^(?![A-Z]).+$
           scopes: |
             main
