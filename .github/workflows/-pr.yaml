@@ -8,6 +8,7 @@ on:
       - reopened
 
 permissions:
+  statuses: write
   pull-requests: write
 
 jobs:
