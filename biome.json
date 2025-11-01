@@ -14,9 +14,6 @@
 		"rules": {
 			"correctness": {
 				"noUndeclaredDependencies": "error"
-			},
-			"nursery": {
-				"useExplicitType": "error"
 			}
 		}
 	},
