@@ -18,6 +18,7 @@ jobs:
       "packages/core": ${{ steps.filter.outputs['packages/core'] }}
       "packages/middleware-retry-after": ${{ steps.filter.outputs['packages/middleware-retry-after'] }}
       "packages/middleware-retry-status": ${{ steps.filter.outputs['packages/middleware-retry-status'] }}
+      "packages/middleware-base-url": ${{ steps.filter.outputs['packages/middleware-base-url'] }}
 
     steps:
       - name: Checkout code
@@ -63,3 +64,11 @@ jobs:
     with:
       package_path: "packages/middleware-retry-status"
       package_name: "@qfetch/middleware-retry-status"
+
+  middleware-base-url:
+    needs: detect-changes
+    if: needs.detect-changes.outputs['packages/middleware-base-url'] == 'true'
+    uses: ./.github/workflows/_template.package-ci.yaml
+    with:
+      package_path: "packages/middleware-base-url"
+      package_name: "@qfetch/middleware-base-url"

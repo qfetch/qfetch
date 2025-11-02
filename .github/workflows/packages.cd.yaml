@@ -24,6 +24,8 @@ jobs:
       "packages/middleware-retry-after--release_created": ${{ steps.release.outputs['packages/middleware-retry-after--release_created'] }}
       "packages/middleware-retry-status--tag_name": ${{ steps.release.outputs['packages/middleware-retry-status--tag_name'] }}
       "packages/middleware-retry-status--release_created": ${{ steps.release.outputs['packages/middleware-retry-status--release_created'] }}
+      "packages/middleware-base-url--tag_name": ${{ steps.release.outputs['packages/middleware-base-url--tag_name'] }}
+      "packages/middleware-base-url--release_created": ${{ steps.release.outputs['packages/middleware-base-url--release_created'] }}
       # Add more outputs for other packages here
 
     steps:
@@ -65,3 +67,12 @@ jobs:
       package_path: "packages/middleware-retry-status"
       package_name: "@qfetch/middleware-retry-status"
       package_tag: ${{ needs.release-please.outputs['packages/middleware-retry-status--tag_name'] }}
+
+  middleware-base-url:
+    if: ${{ needs.release-please.outputs['packages/middleware-base-url--release_created'] == 'true' }}
+    uses: ./.github/workflows/_template-package.cd.yaml
+    needs: release-please
+    with:
+      package_path: "packages/middleware-base-url"
+      package_name: "@qfetch/middleware-base-url"
+      package_tag: ${{ needs.release-please.outputs['packages/middleware-base-url--tag_name'] }}
