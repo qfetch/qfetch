@@ -3,7 +3,7 @@ name: middleware-base-url package
 on:
   pull_request:
     paths:
-      - packages/core/**
+      - packages/middleware-base-url/**
       - .github/workflows/middleware-base-url.ci.yaml
       - .github/workflows/_template-package.ci.yaml
     branches:
