@@ -1,0 +1,52 @@
+{
+	"name": "@qfetch/middleware-base-url",
+	"description": "Fetch middleware",
+	"version": "0.1.0",
+	"author": "vabatta",
+	"bugs": "https://github.com/qfetch/qfetch/issues",
+	"devDependencies": {
+		"@qfetch/core": "workspace:",
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist"
+	],
+	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middleware-base-url#readme",
+	"keywords": [
+		"client",
+		"composable",
+		"fetch",
+		"http",
+		"middleware",
+		"typescript"
+	],
+	"license": "MIT",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/qfetch/qfetch.git",
+		"directory": "packages/middleware-base-url"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check-types": "tsc --noEmit",
+		"style": "biome check .",
+		"test": "node --test"
+	},
+	"type": "module",
+	"types": "./dist/index.d.ts"
+}
