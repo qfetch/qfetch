@@ -4,7 +4,6 @@
 	"tag-separator": "@",
 	"separate-pull-requests": true,
 	"release-type": "node",
-	"changelog-type": "github",
 	"bump-minor-pre-major": true,
 	"bump-patch-for-minor-pre-major": true,
 	"initial-version": "0.1.0",
