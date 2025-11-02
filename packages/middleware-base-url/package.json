@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-base-url",
-	"description": "Fetch middleware",
+	"description": "Middleware for applying a base URL to relative fetch requests.",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
@@ -22,12 +22,11 @@
 	],
 	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middleware-base-url#readme",
 	"keywords": [
-		"client",
 		"composable",
 		"fetch",
 		"http",
 		"middleware",
-		"typescript"
+		"url"
 	],
 	"license": "MIT",
 	"main": "./dist/index.cjs",
