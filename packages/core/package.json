@@ -5,7 +5,6 @@
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
 	"devDependencies": {
-		"rolldown": "catalog:",
 		"tsdown": "catalog:",
 		"typescript": "catalog:"
 	},
