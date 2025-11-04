@@ -3,7 +3,7 @@ import { describe, it, type TestContext } from "node:test";
 import { type BaseUrlOptions, withBaseUrl } from "./with-base-url.ts";
 
 describe("withBaseUrl middleware", () => {
-	describe("Base URL validation", () => {
+	describe("The configured base URL must be valid", () => {
 		it("should fail when provided base URL is invalid", (ctx: TestContext) => {
 			const opts: BaseUrlOptions = "not-a-valid-url";
 
@@ -17,7 +17,7 @@ describe("withBaseUrl middleware", () => {
 		});
 	});
 
-	describe("Request URL resolution for relative and absolute paths", () => {
+	describe("Request destination are rewritten with the base URL", () => {
 		it("should change request made with a relative path", async (ctx: TestContext) => {
 			ctx.plan(1);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
