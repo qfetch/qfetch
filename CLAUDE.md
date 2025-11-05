@@ -63,6 +63,11 @@ Each middleware should:
 
 ## Code Standards
 
+### Runtime
+
+NodeJS 22+
+TypeScript 5.9+
+
 ### Import Organization (Biome)
 Imports are automatically organized into groups:
 1. Built-ins (URL, Node, Bun)
@@ -71,7 +76,8 @@ Imports are automatically organized into groups:
 4. Relative paths
 
 ### Test Configuration
-Tests use Node.js native test runner with native TypeScript.
+Tests use Node.js test runner with native TypeScript transpilation.
+Written using a BDD approach, matching the feature specification where applicable.
 
 ### Gherkin Specifications
 Each middleware can include `.feature` files that:
@@ -80,7 +86,7 @@ Each middleware can include `.feature` files that:
   - Use Feature, Scenario, Given, When, Then, and optionally Background, And, and But
   - Maintain clear, concise, and human-readable language
   - Favor Rule to describe business rules within a Feature and grouped Scenarios
-  - Favor Scenario Outlines with Examples for repetitives Scenarios
+  - Favor Scenario Outlines with Examples for repetitive Scenarios
   - Favor tables for structured data and docstrings for long textual inputs
 2. Reflect domain language (Ubiquitous Language):
   - Describe the feature(s) of the middleware
@@ -138,7 +144,7 @@ pnpm generate  # Creates middleware from turbo templates
    - Add package output mapping
    - Add release job following the `release-core` pattern
 
-3. **CI Workflow** (`.github/workflows/middleware-<name>.ci.yaml`):
+3. **CI Workflow** (`.github/workflows/<name>.ci.yaml`):
    - Create new workflow file using `core.ci.yaml` as template
    - Update paths and package name
 
