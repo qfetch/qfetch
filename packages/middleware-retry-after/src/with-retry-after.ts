@@ -1,8 +1,5 @@
 import type { Middleware } from "@qfetch/core";
 
-type _FetchParameters = Parameters<typeof fetch>;
-type _FetchReturn = Awaited<ReturnType<typeof fetch>>;
-
 /**
  * Configuration options for the {@link withRetryAfter} middleware.
  *
@@ -12,9 +9,26 @@ type _FetchReturn = Awaited<ReturnType<typeof fetch>>;
  *
  * @example
  * ```ts
+ * // Unlimited retries with delay ceiling
+ * const opts: RetryAfterOptions = {
+ *   maxDelayTime: 120_000, // 120 seconds in milliseconds
+ * };
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Limited retries with unlimited delay
  * const opts: RetryAfterOptions = {
  *   maxRetries: 3,
- *   maxDelayTime: 120_000, // 120 seconds in milliseconds
+ * };
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Both limits enforced
+ * const opts: RetryAfterOptions = {
+ *   maxRetries: 3,
+ *   maxDelayTime: 120_000,
  * };
  * ```
  */
@@ -24,30 +38,40 @@ export type RetryAfterOptions = {
 	 * service responds with a retryable status (429 or 503) and a valid
 	 * `Retry-After` header.
 	 *
-	 * - A non-numeric, negative, or `null` value disables retries entirely.
+	 * - Positive integers (`>= 1`) limit the number of retry attempts.
+	 * - A non-numeric, negative, or `0` value means unlimited retries.
+	 * - `undefined` means unlimited retries (default behavior).
 	 *
-	 * @default 0 (no retries)
+	 * @default undefined (unlimited retries)
 	 *
 	 * @example
 	 * ```ts
-	 * { maxRetries: 3 } // up to 3 retry attempts
+	 * { maxRetries: 3 }         // up to 3 retry attempts
+	 * { maxRetries: 0 }         // unlimited retries
+	 * { maxRetries: -5 }        // unlimited retries
+	 * { maxRetries: undefined } // unlimited retries (default)
 	 * ```
 	 */
 	maxRetries?: number;
 
 	/**
 	 * The maximum allowable delay duration (in milliseconds) for a single
-	 * retry attempt. If the server’s specified `Retry-After` value exceeds
-	 * this ceiling, the middleware raises an error and stops execution.
+	 * retry attempt. If the server's specified `Retry-After` value exceeds
+	 * this ceiling, the middleware throws a `DOMException` with name `"AbortError"`
+	 * and stops execution.
 	 *
-	 * - A non-numeric, negative, or `null` value means no ceiling is enforced.
-	 * - If unset, long delays are permitted.
+	 * - Positive integers (`>= 1`) set a ceiling on retry delay duration.
+	 * - A non-numeric, negative, or `0` value means unlimited delay waiting.
+	 * - `undefined` means unlimited delay (default behavior).
 	 *
-	 * @default undefined (no maximum)
+	 * @default undefined (unlimited delay)
 	 *
 	 * @example
 	 * ```ts
-	 * { maxDelayTime: 120_000 } // 120 seconds maximum delay
+	 * { maxDelayTime: 120_000 }   // 120 seconds maximum delay
+	 * { maxDelayTime: 0 }         // unlimited delay
+	 * { maxDelayTime: -100 }      // unlimited delay
+	 * { maxDelayTime: undefined } // unlimited delay (default)
 	 * ```
 	 */
 	maxDelayTime?: number;
@@ -55,37 +79,65 @@ export type RetryAfterOptions = {
 
 /**
  * Middleware that automatically retries failed HTTP requests
- * based on the `Retry-After` header, following the semantics defined
- * in [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
+ * in accordance with the semantics of the `Retry-After` header as defined in
+ * [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
  *
- * This middleware applies retry logic only for responses with status
- * `429 (Too Many Requests)` or `503 (Service Unavailable)`. It interprets
- * the `Retry-After` header, calculates the appropriate delay, waits for
- * that duration, and retries the original request — up to the configured
- * maximum number of attempts and within the configured maximum wait time.
+ * This middleware applies retry logic exclusively to responses with status codes
+ * `429 (Too Many Requests)` or `503 (Service Unavailable)`. Upon receiving such a
+ * response, it interprets the `Retry-After` header to determine the appropriate
+ * delay interval, waits for that duration, and subsequently reissues
+ * the original request — up to the configured maximum number of attempts and
+ * within the specified maximum delay time per retry.
  *
- * ### Behavior summary
- * - Successful responses are passed through unchanged, even if they
- *   include a `Retry-After` header.
- * - Invalid or missing `Retry-After` headers result in no retry.
- * - Numeric `Retry-After` values represent seconds.
- * - HTTP-date `Retry-After` values are interpreted as an absolute future
- *   time; past or present dates result in a zero-delay retry.
- * - Exceeding `maxDelayTime` raises an `AbortError`.
- * - Exceeding `maxRetries` stops retrying and returns the last response.
+ * ### Behavioral summary
+ * - **Successful responses** (2xx) are propagated unchanged, even if a `Retry-After`
+ *   header is present.
+ * - **Missing or invalid `Retry-After` headers** result in no retry; the error response
+ *   is returned immediately.
+ * - **Numeric `Retry-After` values** are treated as delay-seconds (converted to milliseconds).
+ *   Only non-negative integers matching `/^\d+$/` are valid.
+ * - **HTTP-date `Retry-After` values** are interpreted as an absolute timestamp in IMF-fixdate format.
+ *   Times in the past or present result in zero-delay (immediate retry).
+ * - **Exceeding `maxDelayTime`**: If the computed delay exceeds the configured ceiling,
+ *   a `DOMException` with name `"AbortError"` is thrown and no retry occurs.
+ * - **Exceeding `maxRetries`**: Once the retry limit is reached, the middleware returns the
+ *   last received response without further retries.
+ * - **Default behavior**: Without configuration, the middleware retries indefinitely with
+ *   unlimited delay waiting (use with caution).
+ *
+ * ### Important limitations
+ * **Requests with streaming bodies** (e.g., `ReadableStream`) cannot be retried per the
+ * standard Fetch API specification. Attempting to retry such requests will result in a
+ * `TypeError` being thrown. To support retries for streamed requests, consider using an
+ * additional middleware that provides a *body stream factory* capable of recreating the
+ * stream for each retry attempt.
  *
  * @example
  * ```ts
+ * // Unlimited retries (use with caution)
  * import { withRetryAfter } from "@qfetch/middleware-retry-after";
  *
- * const qfetch = withRetryAfter({ maxRetries: 3, maxDelayTime: 120_000 })(fetch);
+ * const qfetch = withRetryAfter()(fetch);
+ * const response = await qfetch("https://api.example.com/data");
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Limited retries with delay ceiling
+ * import { withRetryAfter } from "@qfetch/middleware-retry-after";
+ *
+ * const qfetch = withRetryAfter({
+ *   maxRetries: 3,
+ *   maxDelayTime: 120_000, // 2 minutes
+ * })(fetch);
  *
  * const response = await qfetch("https://api.example.com/data");
  * ```
  *
- * @param opts - Optional retry configuration. See {@link RetryAfterOptions}.
- * @returns A middleware function compatible with `@qfetch/core` that
- *          transparently applies retry logic based on the `Retry-After` header.
+ * @param opts - Optional configuration parameters controlling retry behavior.
+ *               See {@link RetryAfterOptions} for details.
+ * @returns A middleware function compatible with `@qfetch/core` that transparently
+ *          applies retry logic based on the `Retry-After` response header.
  */
 export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 	opts = {},
@@ -93,14 +145,30 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 	const statuses = new Set([429, 503]);
 	const header = "Retry-After";
 
-	let { maxRetries = 0, maxDelayTime } = opts;
-	if (typeof maxRetries !== "number") maxRetries = 0;
-	if (typeof maxDelayTime !== "number") maxDelayTime = undefined;
+	let { maxRetries, maxDelayTime } = opts;
+	if (
+		typeof maxRetries !== "number" ||
+		maxRetries < 1 ||
+		Number.isNaN(maxRetries)
+	) {
+		maxRetries = undefined;
+	}
+	if (
+		typeof maxDelayTime !== "number" ||
+		maxDelayTime < 1 ||
+		Number.isNaN(maxDelayTime)
+	) {
+		maxDelayTime = undefined;
+	}
 
 	return (next) => async (input, init) => {
 		let response = await next(input, init);
 
-		for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+		for (
+			let attempt = 0;
+			maxRetries === undefined || attempt < maxRetries;
+			attempt += 1
+		) {
 			// If successful or not a retryable status, passthrough the response
 			if (response.ok || !statuses.has(response.status)) {
 				break;
@@ -143,12 +211,41 @@ const waitFor = (delay: number): Promise<void> => {
 };
 
 /**
+ * Regular expression matching a `Retry-After` header value expressed as
+ * *delta-seconds*, as defined in [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
+ *
+ * A valid delta-seconds value consists solely of one or more ASCII digits.
+ * Example: `"120"`.
+ *
+ * @see RFC 9110 §10.2.3 — Retry-After
+ */
+const RFC_9110_DELTA_SECONDS = /^\d+$/;
+
+/**
+ * Regular expression matching a `Retry-After` header value expressed as an
+ * *HTTP-date*, in the IMF-fixdate format defined by
+ * [RFC 9110 §5.6.7](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.7).
+ *
+ * This format corresponds to dates such as `"Wed, 21 Oct 2015 07:28:00 GMT"`.
+ * The pattern enforces:
+ * - A three-letter weekday abbreviation with an initial capital (e.g. `Mon`–`Sun`)
+ * - A two-digit day, three-letter month, four-digit year
+ * - A 24-hour time in `HH:MM:SS` format
+ * - A literal `"GMT"` timezone designator
+ *
+ * @see RFC 9110 §5.6.7 — Date/Time Formats
+ * @see RFC 9110 §10.2.3 — Retry-After
+ */
+const RFC_9110_HTTP_DATE =
+	/^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+
+/**
  * Parses a `Retry-After` header according to RFC 9110 §10.2.3.
  *
- * - If the value is an integer, it is interpreted as a delay in seconds.
+ * - If the value is an integer, it is interpreted as a delay in seconds since the parsing.
  * - If the value is an HTTP-date, it is interpreted as the difference
- *   between that time and the current time (in milliseconds).
- * - Invalid, malformed, or past-date values return `null` or `0` as appropriate.
+ *   between that time and the current time.
+ * - Invalid values return `null`.
  *
  * @param value - The raw `Retry-After` header value.
  * @returns The delay duration in milliseconds, or `null` if invalid.
@@ -156,14 +253,16 @@ const waitFor = (delay: number): Promise<void> => {
 const parseRetryAfter = (value: string | null): null | number => {
 	if (value === null) return null;
 
-	const asNumeric = new Number(value);
-	if (!Number.isNaN(asNumeric) && Number.isSafeInteger(asNumeric)) {
-		return asNumeric.valueOf() * 1000; // convert seconds to milliseconds
+	if (RFC_9110_DELTA_SECONDS.test(value)) {
+		const seconds = Number(value);
+		return Number.isSafeInteger(seconds) ? seconds * 1000 : null;
 	}
 
-	const asDate = new Date(value);
-	if (!Number.isNaN(asDate.getTime())) {
-		return asDate.getTime() - Date.now();
+	if (RFC_9110_HTTP_DATE.test(value)) {
+		const date = new Date(value);
+		let difference = date.getTime() - Date.now();
+		if (difference < 0) difference = 0;
+		return Number.isSafeInteger(difference) ? difference : null;
 	}
 
 	return null;
