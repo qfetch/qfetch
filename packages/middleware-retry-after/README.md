@@ -8,6 +8,10 @@ Implements automatic retry logic following [RFC 9110 §10.2.3](https://www.rfc-e
 
 Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
+## Important Limitations
+
+> **Note**: Requests with streaming bodies (e.g., `ReadableStream`) cannot be retried per the Fetch API specification. Attempting to retry such requests will result in a `TypeError`. If you need to retry requests with streaming bodies, consider using an additional middleware in the chain that provides a body stream factory capable of recreating the stream for each retry attempt.
+
 ## Installation
 
 ```bash
@@ -110,4 +114,3 @@ await qfetch('https://api.example.com/data');
 - Requests are retried with the exact same parameters (URL, method, headers, body, etc.)
 - The middleware waits asynchronously during retry delays using `setTimeout`
 - Zero or negative retry delays from the server execute immediately
-- **Warning**: Requests with streaming bodies (e.g., `ReadableStream`) cannot be retried per the Fetch API specification. A `TypeError` will be thrown upon retry. Consider using a body stream factory middleware for retrying streamed requests.
