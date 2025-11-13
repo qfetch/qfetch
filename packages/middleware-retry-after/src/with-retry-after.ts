@@ -145,21 +145,19 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 	const statuses = new Set([429, 503]);
 	const header = "Retry-After";
 
-	let { maxRetries, maxDelayTime } = opts;
-	if (
-		typeof maxRetries !== "number" ||
-		maxRetries < 1 ||
-		Number.isNaN(maxRetries)
-	) {
-		maxRetries = undefined;
-	}
-	if (
-		typeof maxDelayTime !== "number" ||
-		maxDelayTime < 1 ||
-		Number.isNaN(maxDelayTime)
-	) {
-		maxDelayTime = undefined;
-	}
+	const maxRetries =
+		typeof opts.maxRetries === "number" &&
+		opts.maxRetries >= 1 &&
+		!Number.isNaN(opts.maxRetries)
+			? opts.maxRetries
+			: undefined;
+
+	const maxDelayTime =
+		typeof opts.maxDelayTime === "number" &&
+		opts.maxDelayTime >= 1 &&
+		!Number.isNaN(opts.maxDelayTime)
+			? opts.maxDelayTime
+			: undefined;
 
 	return (next) => async (input, init) => {
 		let response = await next(input, init);
@@ -255,13 +253,13 @@ const parseRetryAfter = (value: string | null): null | number => {
 
 	if (RFC_9110_DELTA_SECONDS.test(value)) {
 		const seconds = Number(value);
-		return Number.isSafeInteger(seconds) ? seconds * 1000 : null;
+		const milliseconds = seconds * 1000;
+		return Number.isSafeInteger(milliseconds) ? milliseconds : null;
 	}
 
 	if (RFC_9110_HTTP_DATE.test(value)) {
 		const date = new Date(value);
-		let difference = date.getTime() - Date.now();
-		if (difference < 0) difference = 0;
+		const difference = Math.max(0, date.getTime() - Date.now());
 		return Number.isSafeInteger(difference) ? difference : null;
 	}
 
