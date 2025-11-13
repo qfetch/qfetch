@@ -22,12 +22,12 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
 
 #### Options
 
-- `maxRetries?: number` - Maximum number of retry attempts (default: `0`)
-  - Set to `0` to disable retries
-  - Non-numeric or negative values disable retries
-- `maxDelayTime?: number` - Maximum delay in milliseconds for a single retry (default: `undefined`)
+- `maxRetries?: number` - Maximum number of retry attempts (default: unlimited)
+  - Positive integers limit the number of retry attempts
+  - Non-numeric, negative, or `0` values mean unlimited retries
+- `maxDelayTime?: number` - Maximum delay in milliseconds for a single retry (default: unlimited)
   - If the server's `Retry-After` value exceeds this, an `AbortError` is thrown
-  - Omit or set to `undefined` for no limit
+  - Non-numeric, negative, or `0` values mean unlimited delay
 
 #### Behavior
 
@@ -44,7 +44,21 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
 
 ## Usage
 
-### Basic usage with retry limit
+### Basic usage with unlimited retries
+
+```typescript
+import { withRetryAfter } from '@qfetch/middleware-retry-after';
+import { compose } from '@qfetch/core';
+
+const qfetch = compose(
+  withRetryAfter()
+)(fetch);
+
+// Automatically retries indefinitely on 429 or 503 with Retry-After header
+const response = await qfetch('https://api.example.com/data');
+```
+
+### With retry limit
 
 ```typescript
 import { withRetryAfter } from '@qfetch/middleware-retry-after';
@@ -94,5 +108,6 @@ await qfetch('https://api.example.com/data');
 - This middleware respects the server's rate-limiting guidance through the standard `Retry-After` header
 - It only retries on `429 (Too Many Requests)` and `503 (Service Unavailable)` status codes
 - Requests are retried with the exact same parameters (URL, method, headers, body, etc.)
-- The middleware waits synchronously during retry delays using `setTimeout`
-- Zero or negative retry delays execute immediately
+- The middleware waits asynchronously during retry delays using `setTimeout`
+- Zero or negative retry delays from the server execute immediately
+- **Warning**: Requests with streaming bodies (e.g., `ReadableStream`) cannot be retried per the Fetch API specification. A `TypeError` will be thrown upon retry. Consider using a body stream factory middleware for retrying streamed requests.
