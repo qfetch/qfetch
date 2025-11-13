@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-retry-after",
-	"description": "Fetch middleware",
+	"description": "Fetch middleware for RFC 9110-compliant retry-after handling.",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
