@@ -3,12 +3,13 @@ import { describe, it, type TestContext } from "node:test";
 
 import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 
+/* node:coverage disable */
+
 interface ServerContext {
 	server: Server;
 	baseUrl: string;
 }
 
-/* node:coverage disable */
 describe("framework - E2E tests", { concurrency: true }, () => {
 	/**
 	 * Creates an isolated HTTP server for a single test.
