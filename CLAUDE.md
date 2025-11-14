@@ -6,7 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 qfetch is a TypeScript framework for building composable fetch middlewares using the standard Fetch API and well-known standards from MDN. The project follows composable architecture principles with Single Responsibility Principle (SRP) design, where each middleware has configurable behavior and can be combined with others. It's a monorepo managed with pnpm workspaces, Turbo, and release-please.
 
-## Common Development Commands
+## Development Environment
+
+### Runtime
+
+NodeJS 22+
+TypeScript 5.9+
+
+### Using Nix (Recommended)
+A local development shell with all required dependencies is available using Nix:
+
+```bash
+# Enter development shell with Node.js 22+ and all dependencies
+nix develop
+```
+
+This provides an isolated environment with all necessary tools.
+
+### Common Development Commands
 
 ```bash
 # Generate a new middleware from template
@@ -23,6 +40,12 @@ pnpm check-types
 
 # Run tests
 pnpm test
+
+# Run E2E tests only
+pnpm test:e2e
+
+# Run unit tests only
+pnpm test:unit
 
 # Lint and format code
 pnpm style
@@ -61,11 +84,6 @@ Each middleware should:
 
 ## Code Standards
 
-### Runtime
-
-NodeJS 22+
-TypeScript 5.9+
-
 ### Import Organization (Biome)
 Imports are automatically organized into groups:
 1. Built-ins (URL, Node, Bun)
@@ -80,56 +98,7 @@ Tests use Node.js test runner with native TypeScript transpilation.
 
 #### Test File Types
 - **Unit tests** (`*.test.ts`): Test individual middleware behavior with mocked fetch
-- **E2E tests** (`*.e2e.test.ts`): Test middleware with real HTTP servers and network calls
-
-#### Test Structure Pattern
-All tests follow this consistent structure:
-
-```typescript
-import { describe, it, type TestContext } from "node:test";
-
-/* node:coverage disable */
-describe("Feature/Component name", () => {
-  // Nested describe blocks organize tests by behavior/scenario
-  describe("Behavior description from user perspective", () => {
-    it("should [expected observable behavior]", async (ctx: TestContext) => {
-      // arrange
-      ctx.plan(N); // Number of assertions expected
-      // Setup test data, mocks, and initial state
-
-      // act
-      // Execute the code under test
-
-      // assert
-      // Verify expected outcomes using ctx.assert
-    });
-
-    // For testing multiple variations of the same behavior
-    it("should [behavior] with different inputs", async (ctx: TestContext) => {
-      // arrange
-      ctx.plan(2); // Number of sub-tests
-
-      await ctx.test("specific value case 1", async (ctx: TestContext) => {
-        // arrange
-        ctx.plan(1);
-
-        // act
-
-        // assert
-      });
-
-      await ctx.test("specific value case 2", async (ctx: TestContext) => {
-        // arrange
-        ctx.plan(1);
-
-        // act
-
-        // assert
-      });
-    });
-  });
-});
-```
+- **E2E tests** (`*.e2e-test.ts`): Test middleware with real HTTP servers and network calls
 
 #### Test Conventions
 1. **Context usage**: Always pass `TestContext` as parameter and use `ctx.assert` for assertions
