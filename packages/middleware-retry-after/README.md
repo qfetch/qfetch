@@ -10,7 +10,18 @@ Intended for use with the composable middleware system provided by [`@qfetch/cor
 
 ## Important Limitations
 
-> **Note**: Requests with streaming bodies (e.g., `ReadableStream`) cannot be retried per the Fetch API specification. Attempting to retry such requests will result in a `TypeError`. If you need to retry requests with streaming bodies, consider using an additional middleware in the chain that provides a body stream factory capable of recreating the stream for each retry attempt.
+> **Replayable vs. Non-Replayable Bodies**  
+> Most request bodies — such as strings, `Blob`, `ArrayBuffer`, `Uint8Array`, `FormData`, and `URLSearchParams` — are **replayable**. Fetch recreates their internal body stream for each retry attempt, so these requests can be retried safely without any special handling.
+
+> **Non-Replayable Bodies (Streaming Bodies)**  
+> Requests whose body is a non-replayable type — such as `ReadableStream` — **cannot be retried** according to the Fetch specification. Attempting to retry such requests results in a `TypeError` because the body stream has already been consumed.  
+>  
+> To support retries for streaming bodies, you must provide a *body factory* using a middleware that creates a **fresh stream** for each retry.
+
+> **Note**  
+> These semantics apply consistently across browser Fetch and Node.js Fetch:  
+> - Replayable bodies → safe to retry  
+> - Streams → require a factory
 
 ## Installation
 
@@ -45,6 +56,7 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
   - HTTP-date values are interpreted as absolute future time
   - Invalid or missing headers prevent retries
   - Past dates result in zero-delay retry
+  - Values exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) are treated as invalid to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution
 - **Error handling**:
   - Exceeding `maxDelayTime` throws an `AbortError`
   - Exceeding `maxRetries` returns the last response without retrying

@@ -188,6 +188,8 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 				);
 
 			// Consume the previous response body to free resources
+			// Note: If cancellation fails, the response body may remain in memory until garbage collected,
+			// potentially consuming resources. However, this is a best-effort cleanup that shouldn't block retries.
 			await response.body?.cancel("Retry scheduled").catch(() => {
 				// Errors are swallowed as cleanup is best-effort and shouldn't block retries
 			});
