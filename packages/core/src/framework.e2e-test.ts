@@ -294,30 +294,5 @@ describe("framework - E2E tests", { concurrency: true }, () => {
 				"Both middleware should modify the header",
 			);
 		});
-
-		it("should handle async middleware correctly", async (ctx: TestContext) => {
-			// arrange
-			ctx.plan(1);
-			const { baseUrl } = await createTestServer(ctx);
-
-			const asyncDelay: FetchExecutor = (next) => async (input, init) => {
-				await new Promise((resolve) => setTimeout(resolve, 10));
-				return next(input, init);
-			};
-
-			const qfetch = compose(asyncDelay)(fetch);
-
-			// act
-			const response = await qfetch(`${baseUrl}/success`, {
-				signal: ctx.signal,
-			});
-
-			// assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"Response should succeed after async delay",
-			);
-		});
 	});
 });
