@@ -148,7 +148,12 @@ pnpm generate  # Creates middleware from turbo templates
 ```
 
 **Manual Configuration Required:**
-1. **Release Configuration** (`release-please-config.json`):
+1. **JSR Package Scope** (One-time setup by @qfetch org owner):
+   - **IMPORTANT**: Before publishing, an owner of the `@qfetch` organization on JSR must create the package scope
+   - Navigate to JSR and create the package: `@qfetch/middleware-<name>`
+   - This step is required or the automated publishing will fail
+
+2. **Release Configuration** (`release-please-config.json`):
    ```json
    "packages/middleware-<name>": {
      "extra-files": [
@@ -161,11 +166,11 @@ pnpm generate  # Creates middleware from turbo templates
    }
    ```
 
-2. **CD Workflow** (`.github/workflows/-packages-cd.yaml`):
+3. **CD Workflow** (`.github/workflows/-packages-cd.yaml`):
    - Add package output mapping
    - Add release job following the `release-core` pattern
 
-3. **CI Workflow** (`.github/workflows/<name>.ci.yaml`):
+4. **CI Workflow** (`.github/workflows/<name>.ci.yaml`):
    - Create new workflow file using `core.ci.yaml` as template
    - Update paths and package name
 
