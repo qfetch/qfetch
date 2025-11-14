@@ -95,15 +95,18 @@ export type RetryAfterOptions = {
  * - **Successful responses** (2xx) are propagated unchanged, even if a `Retry-After`
  *   header is present.
  * - **Missing or invalid `Retry-After` headers** result in no retry; the error response
- *   is returned immediately.
+ *   is returned immediately without throwing an error.
  * - **Numeric `Retry-After` values** are treated as delay-seconds (converted to milliseconds).
  *   Only non-negative integers matching `/^\d+$/` are valid.
  * - **HTTP-date `Retry-After` values** are interpreted as an absolute timestamp in IMF-fixdate format.
  *   Times in the past or present result in zero-delay (immediate retry).
  * - **Exceeding `maxDelayTime`**: If the computed delay exceeds the configured ceiling,
  *   a `DOMException` with name `"AbortError"` is thrown and no retry occurs.
+ * - **Exceeding INT32_MAX**: If the computed delay exceeds 2,147,483,647 milliseconds (~24.8 days),
+ *   a `DOMException` with name `"AbortError"` is thrown to prevent `setTimeout` overflow behavior
+ *   where excessively large delays wrap around to immediate execution.
  * - **Exceeding `maxRetries`**: Once the retry limit is reached, the middleware returns the
- *   last received response without further retries.
+ *   last received response without further retries (no error thrown).
  * - **Default behavior**: Without configuration, the middleware retries indefinitely with
  *   unlimited delay waiting (use with caution).
  *
@@ -187,11 +190,18 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 					"AbortError",
 				);
 
-			// Consume the previous response body to free resources
-			// Note: If cancellation fails, the response body may remain in memory until garbage collected,
-			// potentially consuming resources. However, this is a best-effort cleanup that shouldn't block retries.
+			// Enforce INT32_MAX constraint for setTimeout
+			if (delay > INT32_MAX)
+				throw new DOMException(
+					`Retry-After delay exceeds maximum safe setTimeout value: expected up to ${INT32_MAX}, received ${delay}`,
+					"AbortError",
+				);
+
+			// Consume the previous response body in case of retry - it is done after the throws on purpose, so other
+			// upstream middleware in the chain that might reference the response can safely use it.
 			await response.body?.cancel("Retry scheduled").catch(() => {
-				// Errors are swallowed as cleanup is best-effort and shouldn't block retries
+				// Note: If cancellation fails, the response body may remain in memory until garbage collected,
+				// potentially consuming resources. However, this is a best-effort cleanup that shouldn't block retries.
 			});
 
 			// Wait before retrying (zero or negative number executes immediately)
@@ -272,17 +282,13 @@ const parseRetryAfter = (value: string | null): null | number => {
 	if (RFC_9110_DELTA_SECONDS.test(value)) {
 		const seconds = Number(value);
 		const milliseconds = seconds * 1000;
-		return Number.isSafeInteger(milliseconds) && milliseconds <= INT32_MAX
-			? milliseconds
-			: null;
+		return Number.isSafeInteger(milliseconds) ? milliseconds : null;
 	}
 
 	if (RFC_9110_HTTP_DATE.test(value)) {
 		const date = new Date(value);
 		const difference = Math.max(0, date.getTime() - Date.now());
-		return Number.isSafeInteger(difference) && difference <= INT32_MAX
-			? difference
-			: null;
+		return Number.isSafeInteger(difference) ? difference : null;
 	}
 
 	return null;
