@@ -22,10 +22,17 @@
 	],
 	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middleware-retry-after#readme",
 	"keywords": [
+		"retry",
+		"retry-after",
+		"rate-limiting",
+		"429",
+		"503",
+		"rfc9110",
 		"composable",
 		"fetch",
 		"http",
-		"middleware"
+		"middleware",
+		"typescript"
 	],
 	"license": "MIT",
 	"main": "./dist/index.cjs",
