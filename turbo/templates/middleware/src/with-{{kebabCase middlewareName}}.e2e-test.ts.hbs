@@ -3,15 +3,22 @@ import { describe, it, type TestContext } from "node:test";
 
 import { with{{pascalCase middlewareName}} } from "./with-{{kebabCase middlewareName}}.ts";
 
-/* node:coverage disable */
-describe("with{{pascalCase middlewareName}} middleware - E2E tests", () => {
-	let server: Server;
-	let port: number;
-	let baseUrl: string;
+interface ServerContext {
+	server: Server;
+	baseUrl: string;
+}
 
-	const startServer = async (ctx: TestContext): Promise<void> => {
-		server = createServer((req, res) => {
-			const url = new URL(req.url || "/", `http://localhost:${port}`);
+/* node:coverage disable */
+describe("with{{pascalCase middlewareName}} middleware - E2E tests", { concurrency: true }, () => {
+	/**
+	 * Creates an isolated HTTP server for a single test.
+	 * Each test gets its own server on a random port to enable concurrent execution.
+	 */
+	const createTestServer = async (
+		ctx: TestContext,
+	): Promise<ServerContext> => {
+		const server = createServer((req, res) => {
+			const url = new URL(req.url || "/", "http://localhost");
 			const path = url.pathname;
 
 			// TODO: Add route handlers for your middleware's behavior
@@ -26,13 +33,11 @@ describe("with{{pascalCase middlewareName}} middleware - E2E tests", () => {
 			res.end(JSON.stringify({ error: "Not Found" }));
 		});
 
-		await new Promise<void>((resolve, reject) => {
+		const baseUrl = await new Promise<string>((resolve, reject) => {
 			server.listen(0, "127.0.0.1", () => {
 				const address = server.address();
 				if (address && typeof address === "object") {
-					port = address.port;
-					baseUrl = `http://127.0.0.1:${port}`;
-					resolve();
+					resolve(`http://127.0.0.1:${address.port}`);
 				} else {
 					reject(new Error("Failed to get server address"));
 				}
@@ -46,6 +51,8 @@ describe("with{{pascalCase middlewareName}} middleware - E2E tests", () => {
 				server.close(() => resolve());
 			});
 		});
+
+		return { server, baseUrl };
 	};
 
 	// TODO: Add E2E tests for your middleware
@@ -53,7 +60,7 @@ describe("with{{pascalCase middlewareName}} middleware - E2E tests", () => {
 	it("should handle successful requests", async (ctx: TestContext) => {
 		// arrange
 		ctx.plan(1);
-		await startServer(ctx);
+		const { baseUrl } = await createTestServer(ctx);
 		const qfetch = with{{pascalCase middlewareName}}()(fetch);
 
 		// act
