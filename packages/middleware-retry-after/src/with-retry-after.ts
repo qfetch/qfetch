@@ -148,18 +148,18 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 	const header = "Retry-After";
 
 	const maxRetries =
-		typeof opts.maxRetries === "number" &&
-		opts.maxRetries >= 0 &&
-		!Number.isNaN(opts.maxRetries)
-			? opts.maxRetries
-			: undefined;
+		typeof opts.maxRetries !== "number" ||
+		opts.maxRetries < 0 ||
+		Number.isNaN(opts.maxRetries)
+			? undefined
+			: opts.maxRetries;
 
 	const maxDelayTime =
-		typeof opts.maxDelayTime === "number" &&
-		opts.maxDelayTime >= 0 &&
-		!Number.isNaN(opts.maxDelayTime)
-			? opts.maxDelayTime
-			: undefined;
+		typeof opts.maxDelayTime !== "number" ||
+		opts.maxDelayTime < 0 ||
+		Number.isNaN(opts.maxDelayTime)
+			? undefined
+			: opts.maxDelayTime;
 
 	return (next) => async (input, init) => {
 		let response = await next(input, init);
