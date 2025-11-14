@@ -797,6 +797,131 @@ describe("withRetryAfter middleware", () => {
 		});
 	});
 
+	describe("Response body cleanup before retry", () => {
+		it("should cancel response body before retrying", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
+			ctx.mock.timers.enable({ apis: ["setTimeout"] });
+			let cancelCalled = false;
+			let cancelReason: string | undefined;
+			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+
+			fetchMock.mock.mockImplementationOnce(async () => {
+				const stream = new ReadableStream({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("not ok"));
+						controller.close();
+					},
+					cancel(reason) {
+						cancelCalled = true;
+						cancelReason = reason;
+					},
+				});
+				return new Response(stream, {
+					status: 429,
+					headers: { "Retry-After": "1" },
+				});
+			});
+
+			// act
+			const presponse = qfetch("http://example.local");
+			await flushMicrotasks();
+			ctx.mock.timers.tick(1_000);
+			await presponse;
+
+			// assert
+			ctx.assert.strictEqual(
+				cancelCalled,
+				true,
+				"Should call cancel on the stream before retry",
+			);
+			ctx.assert.strictEqual(
+				cancelReason,
+				"Retry scheduled",
+				"Should call cancel with 'Retry scheduled' reason",
+			);
+		});
+
+		it("should propagate body.cancel() errors", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
+			ctx.mock.timers.enable({ apis: ["setTimeout"] });
+			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+
+			fetchMock.mock.mockImplementationOnce(async () => {
+				const stream = new ReadableStream({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("not ok"));
+						controller.close();
+					},
+				});
+
+				const res = new Response(stream, {
+					status: 429,
+					headers: { "Retry-After": "1" },
+				});
+
+				stream.getReader();
+
+				return res;
+			});
+
+			// act
+			const presponse = qfetch("http://example.local");
+			// await flushMicrotasks();
+			ctx.mock.timers.tick(1_000);
+
+			// assert
+			await ctx.assert.rejects(
+				() => presponse,
+				(e: unknown) => e instanceof TypeError,
+				"Should propagate errors from body.cancel()",
+			);
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				1,
+				"Should not retry when body.cancel() throws",
+			);
+		});
+
+		it("should handle responses with null body", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
+			ctx.mock.timers.enable({ apis: ["setTimeout"] });
+			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+
+			fetchMock.mock.mockImplementationOnce(async () => {
+				const response = new Response(null, {
+					status: 429,
+					headers: { "Retry-After": "1" },
+				});
+				return response;
+			});
+
+			// act
+			const presponse = qfetch("http://example.local");
+			await flushMicrotasks();
+			ctx.mock.timers.tick(1_000);
+			const response = await presponse;
+			const body = await response.text();
+
+			// assert
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				2,
+				"Should retry even with null body",
+			);
+			ctx.assert.strictEqual(
+				body,
+				"ok",
+				"Should successfully return response after retry",
+			);
+		});
+	});
+
 	describe("Allows enforcement of a maximum ceiling for retry attempts", () => {
 		it("should retry without a maximum retry limit", async (ctx: TestContext) => {
 			// arrange
