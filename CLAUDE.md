@@ -6,7 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 qfetch is a TypeScript framework for building composable fetch middlewares using the standard Fetch API and well-known standards from MDN. The project follows composable architecture principles with Single Responsibility Principle (SRP) design, where each middleware has configurable behavior and can be combined with others. It's a monorepo managed with pnpm workspaces, Turbo, and release-please.
 
-## Common Development Commands
+## Development Environment
+
+### Runtime
+
+NodeJS 22+
+TypeScript 5.9+
+
+### Using Nix (Recommended)
+A local development shell with all required dependencies is available using Nix:
+
+```bash
+# Enter development shell with Node.js 22+ and all dependencies
+nix develop
+```
+
+This provides an isolated environment with all necessary tools.
+
+### Common Development Commands
 
 ```bash
 # Generate a new middleware from template
@@ -23,6 +40,12 @@ pnpm check-types
 
 # Run tests
 pnpm test
+
+# Run E2E tests only
+pnpm test:e2e
+
+# Run unit tests only
+pnpm test:unit
 
 # Lint and format code
 pnpm style
@@ -58,15 +81,8 @@ Each middleware should:
 - Use standard Fetch API and MDN-documented web standards
 - Be composable with other middlewares without side effects
 - Provide configurable behavior through type-safe options
-- Include Gherkin feature files that describe behavior using clear, descriptive language
-- Leverage full Gherkin syntax (Background, Scenario Outline, Rule, etc.) for comprehensive specification
 
 ## Code Standards
-
-### Runtime
-
-NodeJS 22+
-TypeScript 5.9+
 
 ### Import Organization (Biome)
 Imports are automatically organized into groups:
@@ -77,22 +93,27 @@ Imports are automatically organized into groups:
 
 ### Test Configuration
 Tests use Node.js test runner with native TypeScript transpilation.
-Written using a BDD approach, matching the feature specification where applicable.
 
-### Gherkin Specifications
-Each middleware can include `.feature` files that:
-1. Follow standard Gherkin syntax:
-  - Use clear, descriptive language (avoid user-story style)
-  - Use Feature, Scenario, Given, When, Then, and optionally Background, And, and But
-  - Maintain clear, concise, and human-readable language
-  - Favor Rule to describe business rules within a Feature and grouped Scenarios
-  - Favor Scenario Outlines with Examples for repetitive Scenarios
-  - Favor tables for structured data and docstrings for long textual inputs
-2. Reflect domain language (Ubiquitous Language):
-  - Describe the feature(s) of the middleware
-  - Use terminology specific to the web standards, domain and context
-3. Stay business-focused:
-  - Focus on what the system should do, not how it will be implemented
+**BDD Approach**: Tests follow Behavior-Driven Development principles, focusing on observable behavior rather than implementation details. Test descriptions should express what the system does from a user/consumer perspective, avoiding references to internal implementation details like function names, variable names, or internal state management.
+
+#### Test File Types
+- **Unit tests** (`*.test.ts`): Test individual middleware behavior with mocked fetch
+- **E2E tests** (`*.e2e-test.ts`): Test middleware with real HTTP servers and network calls
+
+#### Test Conventions
+1. **Context usage**: Always pass `TestContext` as parameter and use `ctx.assert` for assertions
+2. **Test planning**: Use `ctx.plan(N)` to declare expected assertion count
+3. **AAA pattern**: Clearly separate Arrange, Act, Assert sections with comments
+4. **Descriptive names**:
+   - `describe()` blocks describe observable behaviors and scenarios
+   - `it()` descriptions start with "should" and describe expected behavior
+   - Avoid implementation details in test names and descriptions
+5. **Mocking with context**: Use `ctx.mock.fn()` for function mocks
+6. **Timer mocking**: Use `ctx.mock.timers.enable()` for time-dependent tests
+7. **Nested tests**: Use `ctx.test()` for sub-test cases within a test
+8. **Async helpers**: Use helper functions like `flushMicrotasks()` for async control
+9. **E2E setup**: Use `ctx.after()` for cleanup and `ctx.signal` for abort handling
+10. **Coverage exclusion**: Add `/* node:coverage disable */` after imports for test files
 
 ## Build System
 
