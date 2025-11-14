@@ -467,28 +467,20 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 	});
 
 	describe("INT32_MAX boundary tests", () => {
-		it("should not retry when Retry-After exceeds INT32_MAX", async (ctx: TestContext) => {
+		it("should throw AbortError when Retry-After exceeds INT32_MAX", async (ctx: TestContext) => {
 			// arrange
-			ctx.plan(2);
+			ctx.plan(1);
 			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
-			// act
-			const response = await qfetch(`${baseUrl}/exceeds-int32`, {
-				signal: ctx.signal,
-			});
-			const data = await response.json();
-
-			// assert
-			ctx.assert.strictEqual(
-				response.status,
-				429,
-				"Response status should remain 429 when exceeding INT32_MAX",
-			);
-			ctx.assert.strictEqual(
-				data.requestCount,
-				1,
-				"Should only make one request when value exceeds INT32_MAX",
+			// act & assert
+			await ctx.assert.rejects(
+				() =>
+					qfetch(`${baseUrl}/exceeds-int32`, {
+						signal: ctx.signal,
+					}),
+				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
+				"Should throw AbortError when Retry-After exceeds INT32_MAX",
 			);
 		});
 	});
