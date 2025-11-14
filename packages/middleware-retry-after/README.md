@@ -52,14 +52,14 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
 - **Successful responses** (status 2xx) are returned immediately, even with a `Retry-After` header
 - **Retryable statuses** (`429` or `503`) trigger retry logic when a valid `Retry-After` header is present
 - **Retry-After parsing**:
-  - Numeric values are interpreted as seconds
-  - HTTP-date values are interpreted as absolute future time
-  - Invalid or missing headers prevent retries
-  - Past dates result in zero-delay retry
-  - Values exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) are treated as invalid to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution
+  - Numeric values are interpreted as seconds (only non-negative integers matching `/^\d+$/` are valid)
+  - HTTP-date values are interpreted as absolute future time in IMF-fixdate format
+  - Invalid or missing headers prevent retries (no error thrown, response returned as-is)
+  - Past dates result in zero-delay retry (immediate retry)
 - **Error handling**:
-  - Exceeding `maxDelayTime` throws an `AbortError`
-  - Exceeding `maxRetries` returns the last response without retrying
+  - Exceeding `maxDelayTime` throws a `DOMException` with name `"AbortError"`
+  - Exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) throws a `DOMException` with name `"AbortError"` to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution
+  - Exceeding `maxRetries` returns the last response without retrying (no error thrown)
 
 ## Usage
 
