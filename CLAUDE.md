@@ -58,8 +58,6 @@ Each middleware should:
 - Use standard Fetch API and MDN-documented web standards
 - Be composable with other middlewares without side effects
 - Provide configurable behavior through type-safe options
-- Include Gherkin feature files that describe behavior using clear, descriptive language
-- Leverage full Gherkin syntax (Background, Scenario Outline, Rule, etc.) for comprehensive specification
 
 ## Code Standards
 
@@ -77,22 +75,76 @@ Imports are automatically organized into groups:
 
 ### Test Configuration
 Tests use Node.js test runner with native TypeScript transpilation.
-Written using a BDD approach, matching the feature specification where applicable.
 
-### Gherkin Specifications
-Each middleware can include `.feature` files that:
-1. Follow standard Gherkin syntax:
-  - Use clear, descriptive language (avoid user-story style)
-  - Use Feature, Scenario, Given, When, Then, and optionally Background, And, and But
-  - Maintain clear, concise, and human-readable language
-  - Favor Rule to describe business rules within a Feature and grouped Scenarios
-  - Favor Scenario Outlines with Examples for repetitive Scenarios
-  - Favor tables for structured data and docstrings for long textual inputs
-2. Reflect domain language (Ubiquitous Language):
-  - Describe the feature(s) of the middleware
-  - Use terminology specific to the web standards, domain and context
-3. Stay business-focused:
-  - Focus on what the system should do, not how it will be implemented
+**BDD Approach**: Tests follow Behavior-Driven Development principles, focusing on observable behavior rather than implementation details. Test descriptions should express what the system does from a user/consumer perspective, avoiding references to internal implementation details like function names, variable names, or internal state management.
+
+#### Test File Types
+- **Unit tests** (`*.test.ts`): Test individual middleware behavior with mocked fetch
+- **E2E tests** (`*.e2e.test.ts`): Test middleware with real HTTP servers and network calls
+
+#### Test Structure Pattern
+All tests follow this consistent structure:
+
+```typescript
+import { describe, it, type TestContext } from "node:test";
+
+/* node:coverage disable */
+describe("Feature/Component name", () => {
+  // Nested describe blocks organize tests by behavior/scenario
+  describe("Behavior description from user perspective", () => {
+    it("should [expected observable behavior]", async (ctx: TestContext) => {
+      // arrange
+      ctx.plan(N); // Number of assertions expected
+      // Setup test data, mocks, and initial state
+
+      // act
+      // Execute the code under test
+
+      // assert
+      // Verify expected outcomes using ctx.assert
+    });
+
+    // For testing multiple variations of the same behavior
+    it("should [behavior] with different inputs", async (ctx: TestContext) => {
+      // arrange
+      ctx.plan(2); // Number of sub-tests
+
+      await ctx.test("specific value case 1", async (ctx: TestContext) => {
+        // arrange
+        ctx.plan(1);
+
+        // act
+
+        // assert
+      });
+
+      await ctx.test("specific value case 2", async (ctx: TestContext) => {
+        // arrange
+        ctx.plan(1);
+
+        // act
+
+        // assert
+      });
+    });
+  });
+});
+```
+
+#### Test Conventions
+1. **Context usage**: Always pass `TestContext` as parameter and use `ctx.assert` for assertions
+2. **Test planning**: Use `ctx.plan(N)` to declare expected assertion count
+3. **AAA pattern**: Clearly separate Arrange, Act, Assert sections with comments
+4. **Descriptive names**:
+   - `describe()` blocks describe observable behaviors and scenarios
+   - `it()` descriptions start with "should" and describe expected behavior
+   - Avoid implementation details in test names and descriptions
+5. **Mocking with context**: Use `ctx.mock.fn()` for function mocks
+6. **Timer mocking**: Use `ctx.mock.timers.enable()` for time-dependent tests
+7. **Nested tests**: Use `ctx.test()` for sub-test cases within a test
+8. **Async helpers**: Use helper functions like `flushMicrotasks()` for async control
+9. **E2E setup**: Use `ctx.after()` for cleanup and `ctx.signal` for abort handling
+10. **Coverage exclusion**: Add `/* node:coverage disable */` after imports for test files
 
 ## Build System
 
