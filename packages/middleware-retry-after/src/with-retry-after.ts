@@ -186,7 +186,9 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 				);
 
 			// Consume the previous response body to free resources
-			await response.body?.cancel("Retry scheduled");
+			await response.body?.cancel("Retry scheduled").catch(() => {
+				// We swalled errors as we try this in a best-effort fashion
+			});
 
 			// Wait before retrying (zero or negative number executes immediately)
 			await waitFor(delay);
@@ -241,6 +243,15 @@ const RFC_9110_HTTP_DATE =
 	/^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
 
 /**
+ * Maximum signed 32-bit integer (2^31 − 1).
+ *
+ * Used to ensure values passed to `setTimeout` do not exceed the maximum
+ * 32-bit range. `setTimeout` clamps delays above this limit, which cause
+ * them to be set to `1` (immediate).
+ */
+const INT32_MAX = 0x7fffffff;
+
+/**
  * Parses a `Retry-After` header according to RFC 9110 §10.2.3.
  *
  * - If the value is an integer, it is interpreted as a delay in seconds since the parsing.
@@ -257,13 +268,17 @@ const parseRetryAfter = (value: string | null): null | number => {
 	if (RFC_9110_DELTA_SECONDS.test(value)) {
 		const seconds = Number(value);
 		const milliseconds = seconds * 1000;
-		return Number.isSafeInteger(milliseconds) ? milliseconds : null;
+		return Number.isSafeInteger(milliseconds) && milliseconds <= INT32_MAX
+			? milliseconds
+			: null;
 	}
 
 	if (RFC_9110_HTTP_DATE.test(value)) {
 		const date = new Date(value);
 		const difference = Math.max(0, date.getTime() - Date.now());
-		return Number.isSafeInteger(difference) ? difference : null;
+		return Number.isSafeInteger(difference) && difference <= INT32_MAX
+			? difference
+			: null;
 	}
 
 	return null;
