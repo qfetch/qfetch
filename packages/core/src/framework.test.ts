@@ -2,6 +2,7 @@ import { describe, it, type TestContext } from "node:test";
 
 import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 
+/* node:coverage disable */
 describe("framework", () => {
 	describe("compose", () => {
 		it("applies middleware in right-to-left order", async (ctx: TestContext) => {
