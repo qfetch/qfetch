@@ -2,7 +2,7 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, ready_for_review]
     # Optional: Only run on specific file changes
     # paths:
     #   - "src/**/*.ts"
@@ -13,7 +13,8 @@ on:
 jobs:
   claude-review:
     if: |
-      github.event.pull_request.user.login == 'vabatta'
+      github.event.pull_request.user.login == 'vabatta' &&
+      github.event.pull_request.draft == false
 
     runs-on: ubuntu-latest
     permissions:
