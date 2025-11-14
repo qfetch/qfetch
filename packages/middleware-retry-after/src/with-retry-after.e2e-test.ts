@@ -3,18 +3,23 @@ import { describe, it, type TestContext } from "node:test";
 
 import { withRetryAfter } from "./with-retry-after.ts";
 
-/* node:coverage disable */
-describe("withRetryAfter middleware - E2E tests", () => {
-	let server: Server;
-	let port: number;
-	let baseUrl: string;
+interface ServerContext {
+	server: Server;
+	baseUrl: string;
+}
 
-	const startServer = async (ctx: TestContext): Promise<void> => {
+/* node:coverage disable */
+describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
+	/**
+	 * Creates an isolated HTTP server for a single test.
+	 * Each test gets its own server on a random port to enable concurrent execution.
+	 */
+	const createTestServer = async (ctx: TestContext): Promise<ServerContext> => {
 		let requestCount = 0;
 
-		server = createServer((req, res) => {
+		const server = createServer((req, res) => {
 			requestCount++;
-			const url = new URL(req.url || "/", `http://localhost:${port}`);
+			const url = new URL(req.url || "/", "http://localhost");
 			const path = url.pathname;
 
 			// Route: /success - Always returns 200
@@ -276,26 +281,16 @@ describe("withRetryAfter middleware - E2E tests", () => {
 				return;
 			}
 
-			// Route: /reset - Reset request counter
-			if (path === "/reset") {
-				requestCount = 0;
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Counter reset", requestCount }));
-				return;
-			}
-
 			// Default 404
 			res.writeHead(404, { "Content-Type": "application/json" });
 			res.end(JSON.stringify({ error: "Not Found" }));
 		});
 
-		await new Promise<void>((resolve, reject) => {
+		const baseUrl = await new Promise<string>((resolve, reject) => {
 			server.listen(0, "127.0.0.1", () => {
 				const address = server.address();
 				if (address && typeof address === "object") {
-					port = address.port;
-					baseUrl = `http://127.0.0.1:${port}`;
-					resolve();
+					resolve(`http://127.0.0.1:${address.port}`);
 				} else {
 					reject(new Error("Failed to get server address"));
 				}
@@ -309,19 +304,15 @@ describe("withRetryAfter middleware - E2E tests", () => {
 				server.close(() => resolve());
 			});
 		});
-	};
 
-	const resetCounter = async (ctx: TestContext): Promise<void> => {
-		await fetch(`${baseUrl}/reset`, { signal: ctx.signal });
-		// Small delay to ensure reset is processed
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		return { server, baseUrl };
 	};
 
 	describe("Successful requests", () => {
 		it("should pass through successful response without retry", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -348,8 +339,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should retry after delay for 429 with Retry-After header", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -374,8 +364,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should not retry 429 without Retry-After header", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -400,8 +389,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should not retry 429 with invalid Retry-After header", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -428,8 +416,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should retry after delay for 503 with Retry-After header", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -456,8 +443,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should retry with HTTP-date format Retry-After", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -484,8 +470,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should not retry when Retry-After exceeds INT32_MAX", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -512,8 +497,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should throw when delay exceeds maxDelayTime", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(1);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({
 				maxRetries: 3,
 				maxDelayTime: 500, // 500ms max delay
@@ -530,8 +514,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should retry when delay is within maxDelayTime", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({
 				maxRetries: 3,
 				maxDelayTime: 5_000, // 5 seconds max delay
@@ -561,8 +544,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should stop retrying after maxRetries is reached", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 1 })(fetch);
 
 			// act
@@ -589,8 +571,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should retry immediately with Retry-After: 0", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -618,8 +599,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should retry multiple times before success", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 5 })(fetch);
 
 			// act
@@ -646,8 +626,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should retry immediately with past HTTP-date", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
@@ -675,8 +654,7 @@ describe("withRetryAfter middleware - E2E tests", () => {
 		it("should handle mix of 429 and 503 across retries", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
 
 			// act
