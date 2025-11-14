@@ -187,7 +187,7 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 
 			// Consume the previous response body to free resources
 			await response.body?.cancel("Retry scheduled").catch(() => {
-				// We swalled errors as we try this in a best-effort fashion
+				// Errors are swallowed as cleanup is best-effort and shouldn't block retries
 			});
 
 			// Wait before retrying (zero or negative number executes immediately)
