@@ -1,0 +1,71 @@
+import { createServer, type Server } from "node:http";
+import { describe, it, type TestContext } from "node:test";
+
+import { with{{pascalCase middlewareName}} } from "./with-{{kebabCase middlewareName}}.ts";
+
+/* node:coverage disable */
+describe("with{{pascalCase middlewareName}} middleware - E2E tests", () => {
+	let server: Server;
+	let port: number;
+	let baseUrl: string;
+
+	const startServer = async (ctx: TestContext): Promise<void> => {
+		server = createServer((req, res) => {
+			const url = new URL(req.url || "/", `http://localhost:${port}`);
+			const path = url.pathname;
+
+			// TODO: Add route handlers for your middleware's behavior
+
+			if (path === "/success") {
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ message: "Success!" }));
+				return;
+			}
+
+			res.writeHead(404, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ error: "Not Found" }));
+		});
+
+		await new Promise<void>((resolve, reject) => {
+			server.listen(0, "127.0.0.1", () => {
+				const address = server.address();
+				if (address && typeof address === "object") {
+					port = address.port;
+					baseUrl = `http://127.0.0.1:${port}`;
+					resolve();
+				} else {
+					reject(new Error("Failed to get server address"));
+				}
+			});
+
+			server.on("error", reject);
+		});
+
+		ctx.after(() => {
+			return new Promise<void>((resolve) => {
+				server.close(() => resolve());
+			});
+		});
+	};
+
+	// TODO: Add E2E tests for your middleware
+
+	it("should handle successful requests", async (ctx: TestContext) => {
+		// arrange
+		ctx.plan(1);
+		await startServer(ctx);
+		const qfetch = with{{pascalCase middlewareName}}()(fetch);
+
+		// act
+		const response = await qfetch(`${baseUrl}/success`, {
+			signal: ctx.signal,
+		});
+
+		// assert
+		ctx.assert.strictEqual(
+			response.status,
+			200,
+			"Response status should be 200",
+		);
+	});
+});

@@ -23,6 +23,8 @@
 		"repo:style": "biome check .",
 		"repo:syncpack:format": "syncpack format -i \"\\t\"",
 		"style": "turbo style",
-		"test": "turbo test"
+		"test": "turbo test",
+		"test:e2e": "turbo test:e2e",
+		"test:unit": "turbo test:unit"
 	}
 }
