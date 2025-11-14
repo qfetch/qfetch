@@ -38,16 +38,17 @@ export type RetryAfterOptions = {
 	 * service responds with a retryable status (429 or 503) and a valid
 	 * `Retry-After` header.
 	 *
+	 * - `0` means no retries at all (fail immediately on first error).
 	 * - Positive integers (`>= 1`) limit the number of retry attempts.
-	 * - A non-numeric, negative, or `0` value means unlimited retries.
+	 * - Negative or non-numeric values mean unlimited retries.
 	 * - `undefined` means unlimited retries (default behavior).
 	 *
 	 * @default undefined (unlimited retries)
 	 *
 	 * @example
 	 * ```ts
+	 * { maxRetries: 0 }         // no retries at all
 	 * { maxRetries: 3 }         // up to 3 retry attempts
-	 * { maxRetries: 0 }         // unlimited retries
 	 * { maxRetries: -5 }        // unlimited retries
 	 * { maxRetries: undefined } // unlimited retries (default)
 	 * ```
@@ -60,16 +61,17 @@ export type RetryAfterOptions = {
 	 * this ceiling, the middleware throws a `DOMException` with name `"AbortError"`
 	 * and stops execution.
 	 *
+	 * - `0` means retry only instant requests (delay must be 0ms, otherwise abort).
 	 * - Positive integers (`>= 1`) set a ceiling on retry delay duration.
-	 * - A non-numeric, negative, or `0` value means unlimited delay waiting.
+	 * - Negative or non-numeric values mean unlimited delay waiting.
 	 * - `undefined` means unlimited delay (default behavior).
 	 *
 	 * @default undefined (unlimited delay)
 	 *
 	 * @example
 	 * ```ts
+	 * { maxDelayTime: 0 }         // retry only instant requests
 	 * { maxDelayTime: 120_000 }   // 120 seconds maximum delay
-	 * { maxDelayTime: 0 }         // unlimited delay
 	 * { maxDelayTime: -100 }      // unlimited delay
 	 * { maxDelayTime: undefined } // unlimited delay (default)
 	 * ```
@@ -147,14 +149,14 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 
 	const maxRetries =
 		typeof opts.maxRetries === "number" &&
-		opts.maxRetries >= 1 &&
+		opts.maxRetries >= 0 &&
 		!Number.isNaN(opts.maxRetries)
 			? opts.maxRetries
 			: undefined;
 
 	const maxDelayTime =
 		typeof opts.maxDelayTime === "number" &&
-		opts.maxDelayTime >= 1 &&
+		opts.maxDelayTime >= 0 &&
 		!Number.isNaN(opts.maxDelayTime)
 			? opts.maxDelayTime
 			: undefined;

@@ -27,11 +27,14 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
 #### Options
 
 - `maxRetries?: number` - Maximum number of retry attempts (default: unlimited)
+  - `0` means no retries at all (fail immediately on first error)
   - Positive integers limit the number of retry attempts
-  - Non-numeric, negative, or `0` values mean unlimited retries
+  - Negative or non-numeric values mean unlimited retries
 - `maxDelayTime?: number` - Maximum delay in milliseconds for a single retry (default: unlimited)
+  - `0` means retry only instant requests (delay must be 0ms, otherwise abort)
+  - Positive integers set a ceiling on retry delay duration
   - If the server's `Retry-After` value exceeds this, an `AbortError` is thrown
-  - Non-numeric, negative, or `0` values mean unlimited delay
+  - Negative or non-numeric values mean unlimited delay
 
 #### Behavior
 
