@@ -3,23 +3,25 @@ import { describe, it, type TestContext } from "node:test";
 
 import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 
+interface ServerContext {
+	server: Server;
+	baseUrl: string;
+}
+
 /* node:coverage disable */
 describe("framework - E2E tests", () => {
-	let server: Server;
-	let port: number;
-	let baseUrl: string;
-
-	const startServer = async (ctx: TestContext): Promise<void> => {
-		let requestCount = 0;
-
-		server = createServer((req, res) => {
-			requestCount++;
-			const url = new URL(req.url || "/", `http://localhost:${port}`);
+	/**
+	 * Creates an isolated HTTP server for a single test.
+	 * Each test gets its own server on a random port to enable concurrent execution.
+	 */
+	const createTestServer = async (ctx: TestContext): Promise<ServerContext> => {
+		const server = createServer((req, res) => {
+			const url = new URL(req.url || "/", "http://localhost");
 			const path = url.pathname;
 
 			if (path === "/success") {
 				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Success!", requestCount }));
+				res.end(JSON.stringify({ message: "Success!" }));
 				return;
 			}
 
@@ -30,24 +32,15 @@ describe("framework - E2E tests", () => {
 				return;
 			}
 
-			if (path === "/reset") {
-				requestCount = 0;
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Counter reset", requestCount }));
-				return;
-			}
-
 			res.writeHead(404, { "Content-Type": "application/json" });
 			res.end(JSON.stringify({ error: "Not Found" }));
 		});
 
-		await new Promise<void>((resolve, reject) => {
+		const baseUrl = await new Promise<string>((resolve, reject) => {
 			server.listen(0, "127.0.0.1", () => {
 				const address = server.address();
 				if (address && typeof address === "object") {
-					port = address.port;
-					baseUrl = `http://127.0.0.1:${port}`;
-					resolve();
+					resolve(`http://127.0.0.1:${address.port}`);
 				} else {
 					reject(new Error("Failed to get server address"));
 				}
@@ -61,19 +54,15 @@ describe("framework - E2E tests", () => {
 				server.close(() => resolve());
 			});
 		});
-	};
 
-	const resetCounter = async (ctx: TestContext): Promise<void> => {
-		await fetch(`${baseUrl}/reset`, { signal: ctx.signal });
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		return { server, baseUrl };
 	};
 
 	describe("compose with real HTTP requests", () => {
 		it("should apply middleware in right-to-left order with real fetch", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 
 			const calls: string[] = [];
 
@@ -115,7 +104,7 @@ describe("framework - E2E tests", () => {
 		it("should allow middleware to modify request headers", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 
 			const addHeader: FetchExecutor = (next) => async (input, init) => {
 				const headers = new Headers(init?.headers);
@@ -147,7 +136,7 @@ describe("framework - E2E tests", () => {
 		it("should work with no middleware", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = compose()(fetch);
 
 			// act
@@ -174,8 +163,7 @@ describe("framework - E2E tests", () => {
 		it("should apply middleware in left-to-right order with real fetch", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
-			await resetCounter(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 
 			const calls: string[] = [];
 
@@ -217,7 +205,7 @@ describe("framework - E2E tests", () => {
 		it("should allow middleware to modify request headers", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 
 			const addHeader: FetchExecutor = (next) => async (input, init) => {
 				const headers = new Headers(init?.headers);
@@ -249,7 +237,7 @@ describe("framework - E2E tests", () => {
 		it("should work with no middleware", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(2);
-			await startServer(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = pipeline()(fetch);
 
 			// act
@@ -276,7 +264,7 @@ describe("framework - E2E tests", () => {
 		it("should allow multiple middleware to modify the same request", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(1);
-			await startServer(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 
 			const addHeader1: FetchExecutor = (next) => async (input, init) => {
 				const headers = new Headers(init?.headers);
@@ -310,7 +298,7 @@ describe("framework - E2E tests", () => {
 		it("should handle async middleware correctly", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(1);
-			await startServer(ctx);
+			const { baseUrl } = await createTestServer(ctx);
 
 			const asyncDelay: FetchExecutor = (next) => async (input, init) => {
 				await new Promise((resolve) => setTimeout(resolve, 10));
