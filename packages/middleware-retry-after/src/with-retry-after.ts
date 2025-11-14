@@ -185,6 +185,9 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 					"AbortError",
 				);
 
+			// Consume the previous response body to free resources
+			await response.body?.cancel("Retry scheduled");
+
 			// Wait before retrying (zero or negative number executes immediately)
 			await waitFor(delay);
 
