@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   release-please:
+    timeout-minutes: 5
     runs-on: ubuntu-24.04
     outputs:
       # You need to explicitly output the tag name and release_created for each package
@@ -34,10 +35,11 @@ jobs:
           echo "Release outputs:"
           echo "${{ toJson(steps.release.outputs) }}"
 
-  release-core:
-    if: ${{ needs.release-please.outputs['packages/core--release_created'] == 'true' }}
-    uses: ./.github/workflows/_template-package.cd.yaml
+  core:
+    name: Core
     needs: release-please
+    if: ${{ needs.release-please.outputs['packages/core--release_created'] == 'true' }}
+    uses: ./.github/workflows/_template.package-cd.yaml
     with:
       package_path: "packages/core"
       package_name: "@qfetch/core"
