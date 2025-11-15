@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-base-url",
-	"description": "Middleware for applying a base URL to relative fetch requests.",
+	"description": "Fetch middleware for automatically resolving URLs against a configured base URL.",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
@@ -22,11 +22,14 @@
 	],
 	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middleware-base-url#readme",
 	"keywords": [
+		"base-url",
 		"composable",
 		"fetch",
 		"http",
 		"middleware",
-		"url"
+		"typescript",
+		"url",
+		"url-resolution"
 	],
 	"license": "MIT",
 	"main": "./dist/index.cjs",
@@ -44,7 +47,9 @@
 		"build": "tsdown",
 		"check-types": "tsc --noEmit",
 		"style": "biome check .",
-		"test": "node --test"
+		"test": "node --test",
+		"test:e2e": "node --test --test-name-pattern=\"/E2E/i\"",
+		"test:unit": "node --test --test-skip-pattern=\"/E2E/i\""
 	},
 	"type": "module",
 	"types": "./dist/index.d.ts"

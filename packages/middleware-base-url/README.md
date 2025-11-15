@@ -1,10 +1,13 @@
 # @qfetch/middleware-base-url
 
-Middleware for applying a base URL to relative fetch requests.
+Fetch middleware for automatically resolving URLs against a configured base URL.
 
 ## Overview
 
-Automatically resolves relative request URLs against a configured base URL, mirroring the behavior of the native `URL` constructor.  
+Automatically resolves request URLs against a configured base URL with **consistent same-origin handling**. All same-origin requests (even those with absolute paths like `/users`) are treated as relative to the base path, while different-origin requests pass through unchanged.
+
+This utility-first approach deviates from strict [URL Standard](https://url.spec.whatwg.org/) behavior to provide a more intuitive and consistent developer experience when working with API clients.
+
 Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
 ## Installation
@@ -15,21 +18,47 @@ npm install @qfetch/middleware-base-url
 
 ## API
 
-### `withBaseUrl(base: string | URL)`
+### `withBaseUrl(options)`
 
 Creates a middleware that resolves relative request paths against the given base URL.
 
-#### Behavior
+#### Parameters
 
-* Relative paths (e.g. `"users"`) are appended to the base URL.
-* Leading slashes (e.g. `"/users"`) resolve to the base URL’s origin root.
-* Fully qualified URLs (e.g. `"https://example.com/data"`) are passed through unchanged.
-* `Request` objects are left unmodified, since their URLs are already fully qualified.
+- `options` (`BaseUrlOptions`): The base URL as a string or `URL` instance
 
-#### Note
+#### Returns
 
-A trailing slash (`/`) is required at the end of the base URL.
-Without it, the `URL` constructor replaces the final path segment instead of appending new paths:
+A middleware function compatible with `@qfetch/core`.
+
+#### Throws
+
+- `TypeError` - When the provided base URL is invalid
+
+### URL Resolution Behavior
+
+The middleware uses **consistent same-origin detection** across all input types:
+
+#### Same-Origin Requests
+
+All same-origin requests (strings, URLs, or Requests) have their paths treated as **relative** and resolved against the base path - even if they start with `/`:
+
+* `"users"` → appended to base path
+* `"/users"` → **also** appended to base path (leading slash stripped)
+* `new URL("/users", origin)` → pathname appended to base path
+
+#### Different-Origin Requests
+
+Cross-origin URLs are **passed through unchanged**, regardless of input type:
+
+* `"https://example.com/data"` → unchanged
+* `new URL("https://example.com/data")` → unchanged
+
+This consistent behavior favors practical utility: if you're using a base URL middleware, you probably want **all** same-origin requests to use that base path.
+
+### Important Note: Trailing Slashes
+
+A trailing slash (`/`) is recommended at the end of the base URL.
+Without it, the `URL` constructor treats the final path segment as a filename and replaces it instead of appending new paths. This follows standard URL resolution behavior:
 
 ```typescript
 new URL("users", "https://api.example.com/v1");  // → "https://api.example.com/users"
@@ -37,6 +66,8 @@ new URL("users", "https://api.example.com/v1/"); // → "https://api.example.com
 ```
 
 ## Usage
+
+### Basic Usage with String Inputs
 
 ```typescript
 import { withBaseUrl } from '@qfetch/middleware-base-url';
@@ -47,18 +78,75 @@ const qfetch = compose(
   withBaseUrl('https://api.example.com/v1/')
 )(fetch);
 
-// Relative path → resolved against the base
-await qfetch('users'); // → https://api.example.com/v1/users
+// Same-origin paths → all resolve against the base
+await qfetch('users');  // → https://api.example.com/v1/users
+await qfetch('/users'); // → https://api.example.com/v1/users (leading slash stripped)
 
-// Leading slash → resolves to origin root
-await qfetch('/users'); // → https://api.example.com/users
-
-// Fully qualified URL → left unchanged
+// Different-origin URL → left unchanged
 await qfetch('https://external.com/data'); // → https://external.com/data
 ```
 
-## Notes
+### Using with URL Objects
 
-* The middleware respects the semantics of the Fetch API — existing `Request` objects are never modified.
-* Base URL logic only applies to string or `URL` inputs.
-* The resolved URL behavior matches the standard `URL` constructor in browsers and workers.
+URL objects with the same origin have their paths resolved against the base:
+
+```typescript
+import { withBaseUrl } from '@qfetch/middleware-base-url';
+
+const qfetch = withBaseUrl('https://api.example.com/v1/')(fetch);
+
+// Same origin → path resolved against base
+const sameOriginUrl = new URL('/users', 'https://api.example.com');
+await qfetch(sameOriginUrl); // → https://api.example.com/v1/users
+
+// Different origin → passed through unchanged
+const differentOriginUrl = new URL('https://external.com/data');
+await qfetch(differentOriginUrl); // → https://external.com/data
+
+// Query parameters and hash are preserved
+const urlWithQuery = new URL('/users?page=1#top', 'https://api.example.com');
+await qfetch(urlWithQuery); // → https://api.example.com/v1/users?page=1#top
+```
+
+### Using with Request Objects
+
+Request objects follow the same same-origin resolution logic as URL objects:
+
+```typescript
+import { withBaseUrl } from '@qfetch/middleware-base-url';
+
+const qfetch = withBaseUrl('https://api.example.com/v1/')(fetch);
+
+// Same-origin Request → path resolved against base
+const sameOriginRequest = new Request(
+  new URL('/users', 'https://api.example.com'),
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'John Doe' })
+  }
+);
+// → https://api.example.com/v1/users
+// All other properties (method, headers, body) are preserved
+await qfetch(sameOriginRequest);
+
+// Different-origin Request → passed through unchanged
+const crossOriginRequest = new Request('https://external.com/webhook', {
+  method: 'POST',
+  body: JSON.stringify({ event: 'user.created' })
+});
+await qfetch(crossOriginRequest); // → https://external.com/webhook
+```
+
+## Limitations
+
+* `Request` objects are reconstructed with new URLs rather than mutated (follows immutability best practices)
+* Request body streams are preserved but not cloned (body remains consumable once)
+* Does not modify request properties other than the URL
+* Requires a valid base URL (invalid URLs will throw `TypeError` during middleware creation)
+
+## Standards References
+
+- [WHATWG URL Standard](https://url.spec.whatwg.org/) - Defines URL resolution behavior
+- [MDN: URL API](https://developer.mozilla.org/en-US/docs/Web/API/URL) - Browser implementation documentation
+- [Fetch Standard](https://fetch.spec.whatwg.org/) - Defines Request and fetch API semantics
