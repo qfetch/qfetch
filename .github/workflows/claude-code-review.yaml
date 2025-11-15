@@ -16,6 +16,7 @@ jobs:
       github.event.pull_request.user.login == 'vabatta' &&
       github.event.pull_request.draft == false
 
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -1,3 +1,5 @@
+name: Package CD Template
+
 on:
   workflow_call:
     inputs:
@@ -21,6 +23,7 @@ on:
 
 jobs:
   build-and-upload:
+    timeout-minutes: 2
     runs-on: ubuntu-24.04
 
     steps:
@@ -62,6 +65,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-npm:
+    timeout-minutes: 2
     runs-on: ubuntu-24.04
     needs: build-and-upload
 
@@ -102,6 +106,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-jsr:
+    timeout-minutes: 2
     runs-on: ubuntu-24.04
     needs: build-and-upload
     permissions:

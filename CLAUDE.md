@@ -130,8 +130,8 @@ The project uses a comprehensive automation setup:
 
 **CI (Continuous Integration):**
 - Triggered on PRs targeting `main` branch
-- Per-package CI workflows (`core.ci.yaml`, etc.) run style, type-check, build, and test
-- Uses template workflow (`_template-package.ci.yaml`) for consistency across packages
+- Centralized CI workflow (`packages.ci.yaml`) detects changed packages and runs CI for each
+- Uses template workflow (`_template.package-ci.yaml`) for consistency across packages
 - Turbo cache optimization for faster builds
 
 **CD (Continuous Deployment):**
@@ -166,13 +166,13 @@ pnpm generate  # Creates middleware from turbo templates
    }
    ```
 
-3. **CD Workflow** (`.github/workflows/-packages-cd.yaml`):
-   - Add package output mapping
-   - Add release job following the `release-core` pattern
+3. **CI Workflow** (`.github/workflows/packages.ci.yaml`):
+   - Add package to the `detect-changes` job filters
+   - Add job for the package following the `core` pattern
 
-4. **CI Workflow** (`.github/workflows/<name>.ci.yaml`):
-   - Create new workflow file using `core.ci.yaml` as template
-   - Update paths and package name
+4. **CD Workflow** (`.github/workflows/packages.cd.yaml`):
+   - Add package output mapping to `release-please` outputs
+   - Add release job following the `core` pattern
 
 ### Commit Requirements
 - **Squash-merge only** - all commits must be squashed when merging PRs
