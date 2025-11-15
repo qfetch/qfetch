@@ -6,7 +6,7 @@ import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 describe("framework", () => {
 	describe("compose", () => {
 		it("should execute middlewares in right-to-left order", async (ctx: TestContext) => {
-			// Arrange
+			// arrange
 			ctx.plan(2);
 			const calls: string[] = [];
 
@@ -31,12 +31,12 @@ describe("framework", () => {
 
 			const qfetch = compose(mw1, mw2)(baseFetch);
 
-			// Act
+			// act
 			const res = await qfetch("https://example.com", { method: "GET" });
 
-			// Assert
-			ctx.assert.equal(await res.text(), "ok");
-			ctx.assert.deepEqual(calls, [
+			// assert
+			ctx.assert.strictEqual(await res.text(), "ok");
+			ctx.assert.deepStrictEqual(calls, [
 				"mw2-before", // mw2 runs first
 				"mw1-before", // then mw1
 				"base-fetch",
@@ -46,7 +46,7 @@ describe("framework", () => {
 		});
 
 		it("should forward request parameters through the middleware chain", async (ctx: TestContext) => {
-			// Arrange
+			// arrange
 			ctx.plan(2);
 			let receivedInput: URL | RequestInfo | undefined;
 			let receivedInit: RequestInit | undefined;
@@ -62,31 +62,31 @@ describe("framework", () => {
 
 			const qfetch = compose(passthrough)(baseFetch);
 
-			// Act
+			// act
 			await qfetch("https://example.com", { method: "POST" });
 
-			// Assert
-			ctx.assert.equal(receivedInput, "https://example.com");
-			ctx.assert.deepEqual(receivedInit, { method: "POST" });
+			// assert
+			ctx.assert.strictEqual(receivedInput, "https://example.com");
+			ctx.assert.deepStrictEqual(receivedInit, { method: "POST" });
 		});
 
 		it("should work when no middlewares are provided", async (ctx: TestContext) => {
-			// Arrange
+			// arrange
 			ctx.plan(1);
 			const baseFetch = ctx.mock.fn(fetch, async () => new Response("ok"));
 			const qfetch = compose()(baseFetch);
 
-			// Act
+			// act
 			const res = await qfetch("url");
 
-			// Assert
-			ctx.assert.equal(await res.text(), "ok");
+			// assert
+			ctx.assert.strictEqual(await res.text(), "ok");
 		});
 	});
 
 	describe("pipeline", () => {
 		it("should execute middlewares in left-to-right order", async (ctx: TestContext) => {
-			// Arrange
+			// arrange
 			ctx.plan(2);
 			const calls: string[] = [];
 
@@ -111,12 +111,12 @@ describe("framework", () => {
 
 			const qfetch = pipeline(mw1, mw2)(baseFetch);
 
-			// Act
+			// act
 			const res = await qfetch("https://example.com", { method: "GET" });
 
-			// Assert
-			ctx.assert.equal(await res.text(), "ok");
-			ctx.assert.deepEqual(calls, [
+			// assert
+			ctx.assert.strictEqual(await res.text(), "ok");
+			ctx.assert.deepStrictEqual(calls, [
 				"mw1-before", // mw1 runs first
 				"mw2-before", // then mw2
 				"base-fetch",
@@ -126,7 +126,7 @@ describe("framework", () => {
 		});
 
 		it("should forward request parameters through the middleware chain", async (ctx: TestContext) => {
-			// Arrange
+			// arrange
 			ctx.plan(2);
 			let receivedInput: URL | RequestInfo | undefined;
 			let receivedInit: RequestInit | undefined;
@@ -142,25 +142,25 @@ describe("framework", () => {
 
 			const qfetch = pipeline(passthrough)(baseFetch);
 
-			// Act
+			// act
 			await qfetch("https://example.com", { method: "POST" });
 
-			// Assert
-			ctx.assert.equal(receivedInput, "https://example.com");
-			ctx.assert.deepEqual(receivedInit, { method: "POST" });
+			// assert
+			ctx.assert.strictEqual(receivedInput, "https://example.com");
+			ctx.assert.deepStrictEqual(receivedInit, { method: "POST" });
 		});
 
 		it("should work when no middlewares are provided", async (ctx: TestContext) => {
-			// Arrange
+			// arrange
 			ctx.plan(1);
 			const baseFetch = ctx.mock.fn(fetch, async () => new Response("ok"));
 			const qfetch = pipeline()(baseFetch);
 
-			// Act
+			// act
 			const res = await qfetch("url");
 
-			// Assert
-			ctx.assert.equal(await res.text(), "ok");
+			// assert
+			ctx.assert.strictEqual(await res.text(), "ok");
 		});
 	});
 });

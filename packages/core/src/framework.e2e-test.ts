@@ -260,40 +260,4 @@ describe("framework - E2E tests", { concurrency: true }, () => {
 			);
 		});
 	});
-
-	describe("middleware composition patterns", () => {
-		it("should allow multiple middleware to modify the same request", async (ctx: TestContext) => {
-			// arrange
-			ctx.plan(1);
-			const { baseUrl } = await createTestServer(ctx);
-
-			const addHeader1: FetchExecutor = (next) => async (input, init) => {
-				const headers = new Headers(init?.headers);
-				headers.set("X-Custom-Header", "value1");
-				return next(input, { ...init, headers });
-			};
-
-			const addHeader2: FetchExecutor = (next) => async (input, init) => {
-				const headers = new Headers(init?.headers);
-				const existing = headers.get("X-Custom-Header") || "";
-				headers.set("X-Custom-Header", `${existing},value2`);
-				return next(input, { ...init, headers });
-			};
-
-			const qfetch = compose(addHeader2, addHeader1)(fetch);
-
-			// act
-			const response = await qfetch(`${baseUrl}/echo-headers`, {
-				signal: ctx.signal,
-			});
-			const data = await response.json();
-
-			// assert
-			ctx.assert.strictEqual(
-				data.customHeader,
-				"value1,value2",
-				"Both middleware should modify the header",
-			);
-		});
-	});
 });
