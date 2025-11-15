@@ -19,6 +19,7 @@ jobs:
       core: ${{ steps.filter.outputs.core }}
       utils: ${{ steps.filter.outputs.utils }}
       sdk: ${{ steps.filter.outputs.sdk }}
+      middleware-base-url: ${{ steps.filter.outputs.middleware-base-url }}
 
     steps:
       - name: Checkout code
@@ -35,6 +36,9 @@ jobs:
               - 'packages/core/**'
               - '.github/workflows/core.ci.yaml'
               - '.github/workflows/_template.package-ci.yaml'
+            middleware-base-url:
+              - 'packages/middleware-base-url/**'
+              - '.github/workflows/_template.package-ci.yaml'
 
   core:
     name: Core
@@ -44,3 +48,12 @@ jobs:
     with:
       package_path: "packages/core"
       package_name: "@qfetch/core"
+
+  middleware-base-url:
+    name: Middleware Base URL
+    needs: detect-changes
+    if: needs.detect-changes.outputs['middleware-base-url'] == 'true'
+    uses: ./.github/workflows/_template.package-ci.yaml
+    with:
+      package_path: "packages/middleware-base-url"
+      package_name: "@qfetch/middleware-base-url"
