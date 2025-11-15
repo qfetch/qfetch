@@ -50,8 +50,9 @@ jobs:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   release-middleware-retry-after:
+    name: Middleware Retry After
     if: ${{ needs.release-please.outputs['packages/middleware-retry-after--release_created'] == 'true' }}
-    uses: ./.github/workflows/_template-package.cd.yaml
+    uses: ./.github/workflows/_template.package-cd.yaml
     needs: release-please
     with:
       package_path: "packages/middleware-retry-after"
