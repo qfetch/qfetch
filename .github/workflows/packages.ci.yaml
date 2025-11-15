@@ -40,6 +40,9 @@ jobs:
             'packages/middleware-retry-status':
               - 'packages/middleware-retry-status/**'
               - '.github/workflows/_template.package-ci.yaml'
+            'packages/middleware-base-url':
+              - 'packages/middleware-base-url/**'
+              - '.github/workflows/_template.package-ci.yaml'
 
   core:
     needs: detect-changes
