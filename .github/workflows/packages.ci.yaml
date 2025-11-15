@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       "packages/core": ${{ steps.filter.outputs['packages/core'] }}
+      "packages/middleware-retry-after": ${{ steps.filter.outputs['packages/middleware-retry-after'] }}
 
     steps:
       - name: Checkout code
@@ -31,6 +32,9 @@ jobs:
             'packages/core':
               - 'packages/core/**'
               - '.github/workflows/_template.package-ci.yaml'
+            'packages/middleware-retry-after':
+              - 'packages/middleware-retry-after/**'
+              - '.github/workflows/_template.package-ci.yaml'
 
   core:
     needs: detect-changes
@@ -39,3 +43,12 @@ jobs:
     with:
       package_path: "packages/core"
       package_name: "@qfetch/core"
+
+  middleware-retry-after:
+    name: Middleware Retry After
+    needs: detect-changes
+    if: needs.detect-changes.outputs['packages/middleware-retry-after'] == 'true'
+    uses: ./.github/workflows/_template.package-ci.yaml
+    with:
+      package_path: "packages/middleware-retry-after"
+      package_name: "@qfetch/middleware-retry-after"
