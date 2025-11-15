@@ -20,7 +20,7 @@ npm install @qfetch/middleware-base-url
 
 ### `withBaseUrl(options)`
 
-Creates a middleware that resolves relative request paths against the given base URL.
+Creates a middleware that resolves request URLs against the given base URL.
 
 #### Parameters
 
@@ -140,10 +140,8 @@ await qfetch(crossOriginRequest); // → https://external.com/webhook
 
 ## Limitations
 
-* `Request` objects are reconstructed with new URLs rather than mutated (follows immutability best practices)
+* `Request` objects are reconstructed with new URLs rather than mutated (the API is immutable)
 * Request body streams are preserved but not cloned (body remains consumable once)
-* Does not modify request properties other than the URL
-* Requires a valid base URL (invalid URLs will throw `TypeError` during middleware creation)
 
 ## Standards References
 
