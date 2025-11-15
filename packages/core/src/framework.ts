@@ -28,10 +28,12 @@ export type FetchExecutor = (next: FetchFunction) => FetchFunction;
  * // With options middleware
  * const withRetry: Middleware<{ maxRetries: number }> = (opts) => (next) =>
  *   async (input, init) => {
- *     for (let i = 0; i <= opts.maxRetries; i++) {
- *       try { return await next(input, init); }
- *       catch (e) { if (i === opts.maxRetries) throw e; }
- *     }
+ *     let response: Response;
+ *     let attempt = 1;
+ *     do {
+ *       response = await next(input, init);
+ *     } while (!response.ok && attempt++ <= opts.maxRetries);
+ *     return response;
  *   };
  * ```
  */
@@ -81,11 +83,11 @@ export const compose = (...middlewares: FetchExecutor[]): FetchExecutor => {
  * @example
  * ```typescript
  * const qfetch = pipeline(
- *   withLogger(),
- *   withRetry({ maxRetries: 3 })
+ *   withRetry({ maxRetries: 3 }),
+ *   withLogger()
  * )(fetch);
  *
- * // logs -> retries
+ * // retries -> logs
  * ```
  */
 export const pipeline = (...middlewares: FetchExecutor[]): FetchExecutor => {
@@ -94,10 +96,3 @@ export const pipeline = (...middlewares: FetchExecutor[]): FetchExecutor => {
 		return middlewares.reduceRight((next, current) => current(next), baseFetch);
 	};
 };
-
-// TODO: should we decorate and add a `context` key so middleware can store data cross-middleware per request?
-// declare global {
-// 	interface RequestInit {
-// 		context?: Record<string, unknown>;
-// 	}
-// }

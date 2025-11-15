@@ -44,7 +44,9 @@
 		"build": "tsdown",
 		"check-types": "tsc --noEmit",
 		"style": "biome check .",
-		"test": "node --test"
+		"test": "node --test",
+		"test:e2e": "node --test --test-name-pattern=\"/E2E/i\"",
+		"test:unit": "node --test --test-skip-pattern=\"/E2E/i\""
 	},
 	"type": "module",
 	"types": "./dist/index.d.ts"

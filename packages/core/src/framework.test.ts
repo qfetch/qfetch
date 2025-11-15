@@ -2,9 +2,12 @@ import { describe, it, type TestContext } from "node:test";
 
 import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 
+/* node:coverage disable */
 describe("framework", () => {
 	describe("compose", () => {
-		it("applies middleware in right-to-left order", async (ctx: TestContext) => {
+		it("should execute middlewares in right-to-left order", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
 			const calls: string[] = [];
 
 			const mw1: FetchExecutor = (next) => async (input, init) => {
@@ -28,10 +31,12 @@ describe("framework", () => {
 
 			const qfetch = compose(mw1, mw2)(baseFetch);
 
+			// act
 			const res = await qfetch("https://example.com", { method: "GET" });
 
-			ctx.assert.equal(await res.text(), "ok");
-			ctx.assert.deepEqual(calls, [
+			// assert
+			ctx.assert.strictEqual(await res.text(), "ok");
+			ctx.assert.deepStrictEqual(calls, [
 				"mw2-before", // mw2 runs first
 				"mw1-before", // then mw1
 				"base-fetch",
@@ -40,7 +45,9 @@ describe("framework", () => {
 			]);
 		});
 
-		it("passes input and init to base fetch", async (ctx: TestContext) => {
+		it("should forward request parameters through the middleware chain", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
 			let receivedInput: URL | RequestInfo | undefined;
 			let receivedInit: RequestInit | undefined;
 
@@ -55,23 +62,32 @@ describe("framework", () => {
 
 			const qfetch = compose(passthrough)(baseFetch);
 
+			// act
 			await qfetch("https://example.com", { method: "POST" });
 
-			ctx.assert.equal(receivedInput, "https://example.com");
-			ctx.assert.deepEqual(receivedInit, { method: "POST" });
+			// assert
+			ctx.assert.strictEqual(receivedInput, "https://example.com");
+			ctx.assert.deepStrictEqual(receivedInit, { method: "POST" });
 		});
 
-		it("works with no middleware", async (ctx: TestContext) => {
+		it("should work when no middlewares are provided", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(1);
 			const baseFetch = ctx.mock.fn(fetch, async () => new Response("ok"));
 			const qfetch = compose()(baseFetch);
 
+			// act
 			const res = await qfetch("url");
-			ctx.assert.equal(await res.text(), "ok");
+
+			// assert
+			ctx.assert.strictEqual(await res.text(), "ok");
 		});
 	});
 
 	describe("pipeline", () => {
-		it("applies middleware in left-to-right order", async (ctx: TestContext) => {
+		it("should execute middlewares in left-to-right order", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
 			const calls: string[] = [];
 
 			const mw1: FetchExecutor = (next) => async (input, init) => {
@@ -95,10 +111,12 @@ describe("framework", () => {
 
 			const qfetch = pipeline(mw1, mw2)(baseFetch);
 
+			// act
 			const res = await qfetch("https://example.com", { method: "GET" });
 
-			ctx.assert.equal(await res.text(), "ok");
-			ctx.assert.deepEqual(calls, [
+			// assert
+			ctx.assert.strictEqual(await res.text(), "ok");
+			ctx.assert.deepStrictEqual(calls, [
 				"mw1-before", // mw1 runs first
 				"mw2-before", // then mw2
 				"base-fetch",
@@ -107,7 +125,9 @@ describe("framework", () => {
 			]);
 		});
 
-		it("passes input and init to base fetch", async (ctx: TestContext) => {
+		it("should forward request parameters through the middleware chain", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
 			let receivedInput: URL | RequestInfo | undefined;
 			let receivedInit: RequestInit | undefined;
 
@@ -122,18 +142,25 @@ describe("framework", () => {
 
 			const qfetch = pipeline(passthrough)(baseFetch);
 
+			// act
 			await qfetch("https://example.com", { method: "POST" });
 
-			ctx.assert.equal(receivedInput, "https://example.com");
-			ctx.assert.deepEqual(receivedInit, { method: "POST" });
+			// assert
+			ctx.assert.strictEqual(receivedInput, "https://example.com");
+			ctx.assert.deepStrictEqual(receivedInit, { method: "POST" });
 		});
 
-		it("works with no middleware", async (ctx: TestContext) => {
+		it("should work when no middlewares are provided", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(1);
 			const baseFetch = ctx.mock.fn(fetch, async () => new Response("ok"));
 			const qfetch = pipeline()(baseFetch);
 
+			// act
 			const res = await qfetch("url");
-			ctx.assert.equal(await res.text(), "ok");
+
+			// assert
+			ctx.assert.strictEqual(await res.text(), "ok");
 		});
 	});
 });
