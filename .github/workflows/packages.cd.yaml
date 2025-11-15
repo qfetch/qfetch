@@ -20,6 +20,8 @@ jobs:
       # are set up to handle multiple packages and will output these.
       "packages/core--tag_name": ${{ steps.release.outputs['packages/core--tag_name'] }}
       "packages/core--release_created": ${{ steps.release.outputs['packages/core--release_created'] }}
+      "packages/middleware-base-url--tag_name": ${{ steps.release.outputs['packages/middleware-base-url--tag_name'] }}
+      "packages/middleware-base-url--release_created": ${{ steps.release.outputs['packages/middleware-base-url--release_created'] }}
       # Add more outputs for other packages here
 
     steps:
@@ -44,5 +46,17 @@ jobs:
       package_path: "packages/core"
       package_name: "@qfetch/core"
       package_tag: ${{ needs.release-please.outputs['packages/core--tag_name'] }}
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  middleware-base-url:
+    name: Middleware Base URL
+    if: ${{ needs.release-please.outputs['packages/middleware-base-url--release_created'] == 'true' }}
+    uses: ./.github/workflows/_template.package-cd.yaml
+    needs: release-please
+    with:
+      package_path: "packages/middleware-base-url"
+      package_name: "@qfetch/middleware-base-url"
+      package_tag: ${{ needs.release-please.outputs['packages/middleware-base-url--tag_name'] }}
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
