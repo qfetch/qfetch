@@ -1,71 +1,102 @@
 import type { Middleware } from "@qfetch/core";
 
 /**
- * Configuration options for the {@link withBaseUrl} middleware.
+ * Base URL for resolving relative request paths (string or URL instance).
  *
- * Represents the base URL that all relative request paths will be resolved against.
- * This can be provided as either a string or a pre-constructed `URL` object.
+ * @remarks
+ * Trailing slash recommended: `"https://api.example.com/v1/"` appends paths,
+ * while `"https://api.example.com/v1"` replaces the last segment.
  *
- * @example
- * ```ts
- * // As a string
- * const base: BaseUrlOptions = "https://api.example.com/v1/";
- *
- * // As a URL instance
- * const base: BaseUrlOptions = new URL("https://api.example.com/v1/");
- * ```
- *
- * @note A trailing slash (`/`) at the end of the base URL is required.
- * Without it, the `URL` constructor treats the final path segment as a file name
- * and replaces it when resolving relative paths, e.g.:
- * ```ts
- * new URL("users", "https://api.example.com/v1"); // → "https://api.example.com/users"
- * new URL("users", "https://api.example.com/v1/"); // → "https://api.example.com/v1/users"
- * ```
+ * @see https://url.spec.whatwg.org/
  */
 export type BaseUrlOptions = string | URL;
 
 /**
- * Middleware that automatically applies a base URL to relative fetch requests.
+ * Resolves fetch requests against a base URL with consistent same-origin handling.
  *
- * This utility wraps a fetch-like function and ensures that any relative
- * request URLs are resolved against the configured base URL, mirroring the
- * behavior of the native `URL` constructor.
+ * **Same-origin requests:** All paths (even those starting with `/`) are treated
+ * as relative and resolved against the base path. This ensures consistent behavior
+ * across string, URL, and Request inputs.
  *
- * **Behavior**
- * - Relative paths (e.g. `"users"`) are resolved relative to the base URL.
- * - Absolute paths (e.g. `"/users"`) are resolved to the base URL’s origin root.
- * - Fully qualified URLs (e.g. `"https://example.com/data"`) are left unchanged.
- * - `Request` objects are passed through unmodified, since their `.url` is
- *   always fully qualified and cannot be safely rebased without breaking the
- *   semantics of the Fetch API.
+ * **Different-origin requests:** Passed through unchanged (cross-origin requests
+ * remain intact).
+ *
+ * Preserves input types (string→string, URL→URL, Request→Request).
  *
  * @example
  * ```ts
- * import { withBaseUrl } from "@qfetch/middleware-base-url";
- *
  * const qfetch = withBaseUrl("https://api.example.com/v1/")(fetch);
  *
- * // Resolves to "https://api.example.com/v1/users"
- * await qfetch("users");
+ * // Same-origin inputs - all resolve against base path
+ * await qfetch("users");                      // → "https://api.example.com/v1/users"
+ * await qfetch("/users");                     // → "https://api.example.com/v1/users"
+ * await qfetch(new URL("/users", "https://api.example.com"));
+ * // → "https://api.example.com/v1/users"
+ *
+ * // Different-origin inputs - unchanged
+ * await qfetch("https://other.com/data");     // → "https://other.com/data"
+ * await qfetch(new URL("https://other.com/data"));
+ * // → "https://other.com/data"
  * ```
  *
- * @param opts - The base URL to resolve relative requests against.
- * @returns A middleware function compatible with `@qfetch/core`.
+ * @param opts - Base URL (string or URL instance)
+ * @throws {TypeError} When base URL is invalid
+ * @see https://url.spec.whatwg.org/
  */
 export const withBaseUrl: Middleware<BaseUrlOptions> = (opts) => {
 	const base = new URL(opts);
 
 	return (next) => async (input, init) => {
-		// NOTE: keep the same input type in the chain
-		if (typeof input === "string") input = new URL(input, base).toString();
-		else if (input instanceof URL) input = new URL(input, base);
-		// NOTE: Pass through Request objects without modifying their URL.
-		// Reason: Request.url is always fully resolved (absolute) by the runtime.
-		// Once constructed, the original relative input is lost, so rebasing would
-		// be inaccurate and could break the semantics of the Fetch API—potentially
-		// redirecting requests to unintended hosts. Base URL logic should only apply
-		// to string or URL inputs, not Request objects.
+		// Apply base URL resolution to string, URL, and Request inputs.
+		// Preserve the input type (string → string, URL → URL, Request → Request)
+		// to maintain type consistency throughout the middleware chain.
+		if (typeof input === "string") {
+			// Try to parse as absolute URL first
+			let url: URL;
+			try {
+				url = new URL(input);
+			} catch {
+				// Not absolute, resolve against base
+				url = new URL(input, base);
+			}
+
+			// Same-origin strings: treat pathname as relative, resolve against base path
+			// Different-origin strings: pass through unchanged (cross-origin request)
+			if (url.origin === base.origin) {
+				// Strip leading slash to force relative resolution
+				const relativePath =
+					url.pathname === input ? url.pathname.substring(1) : url.pathname;
+				input = new URL(relativePath + url.search + url.hash, base).toString();
+			} else {
+				// Different origin, use as-is
+				input = url.toString();
+			}
+		} else if (input instanceof URL) {
+			// Same-origin URLs: treat pathname as relative, resolve against base path
+			// Different-origin URLs: pass through unchanged (cross-origin request)
+			if (input.origin === base.origin) {
+				// Strip leading slash to force relative resolution
+				const relativePath = input.pathname.startsWith("/")
+					? input.pathname.substring(1)
+					: input.pathname;
+				input = new URL(relativePath + input.search + input.hash, base);
+			}
+			// else: different origin, pass through unchanged
+		} else if (input instanceof Request) {
+			const requestUrl = new URL(input.url);
+			// Same-origin Requests: treat pathname as relative, resolve against base path
+			// Different-origin Requests: pass through unchanged (cross-origin request)
+			if (requestUrl.origin === base.origin) {
+				const resolvedUrl = new URL(
+					requestUrl.pathname.substring(1) +
+						requestUrl.search +
+						requestUrl.hash,
+					base,
+				);
+				input = new Request(resolvedUrl, input);
+			}
+			// else: different origin, pass through unchanged
+		}
 
 		return next(input, init);
 	};
