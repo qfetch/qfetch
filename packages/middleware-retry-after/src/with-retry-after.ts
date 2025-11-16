@@ -3,146 +3,73 @@ import type { Middleware } from "@qfetch/core";
 /**
  * Configuration options for the {@link withRetryAfter} middleware.
  *
- * These options control how the middleware interprets and enforces
- * retry behavior when a downstream service responds with an HTTP
- * `Retry-After` header for retryable status codes (429 or 503).
- *
  * @example
  * ```ts
- * // Unlimited retries with delay ceiling
- * const opts: RetryAfterOptions = {
- *   maxDelayTime: 120_000, // 120 seconds in milliseconds
- * };
- * ```
- *
- * @example
- * ```ts
- * // Limited retries with unlimited delay
- * const opts: RetryAfterOptions = {
- *   maxRetries: 3,
- * };
- * ```
- *
- * @example
- * ```ts
- * // Both limits enforced
- * const opts: RetryAfterOptions = {
- *   maxRetries: 3,
- *   maxDelayTime: 120_000,
- * };
+ * { maxRetries: 3, maxDelayTime: 120_000, maxJitter: 5_000 }
  * ```
  */
 export type RetryAfterOptions = {
 	/**
-	 * The maximum number of retry attempts allowed when the downstream
-	 * service responds with a retryable status (429 or 503) and a valid
-	 * `Retry-After` header.
-	 *
-	 * - `0` means no retries at all (fail immediately on first error).
-	 * - Positive integers (`>= 1`) limit the number of retry attempts.
-	 * - Negative or non-numeric values mean unlimited retries.
-	 * - `undefined` means unlimited retries (default behavior).
-	 *
-	 * @default undefined (unlimited retries)
-	 *
-	 * @example
-	 * ```ts
-	 * { maxRetries: 0 }         // no retries at all
-	 * { maxRetries: 3 }         // up to 3 retry attempts
-	 * { maxRetries: -5 }        // unlimited retries
-	 * { maxRetries: undefined } // unlimited retries (default)
-	 * ```
+	 * Maximum number of retry attempts. Default: unlimited.
+	 * - `0` = no retries
+	 * - `>= 1` = limit retry attempts
+	 * - Negative/NaN/undefined = unlimited
 	 */
 	maxRetries?: number;
 
 	/**
-	 * The maximum allowable delay duration (in milliseconds) for a single
-	 * retry attempt. If the server's specified `Retry-After` value exceeds
-	 * this ceiling, the middleware throws a `DOMException` with name `"AbortError"`
-	 * and stops execution.
+	 * Maximum delay in milliseconds for a single retry. Default: unlimited.
+	 * Throws `AbortError` if `Retry-After` exceeds this value.
+	 * - `0` = only instant retries
+	 * - `>= 1` = ceiling on delay
+	 * - Negative/NaN/undefined = unlimited
+	 */
+	maxDelayTime?: number;
+
+	/**
+	 * Maximum random jitter in milliseconds using full-jitter strategy. Default: no jitter.
+	 * Prevents thundering herd by adding randomness to retry timing.
 	 *
-	 * - `0` means retry only instant requests (delay must be 0ms, otherwise abort).
-	 * - Positive integers (`>= 1`) set a ceiling on retry delay duration.
-	 * - Negative or non-numeric values mean unlimited delay waiting.
-	 * - `undefined` means unlimited delay (default behavior).
+	 * Full-jitter formula: `retryAfterDelay + random(0, min(maxJitter, retryAfterDelay))`
 	 *
-	 * @default undefined (unlimited delay)
+	 * This ensures jitter scales with the base delay while respecting the cap.
+	 * - `0` = no jitter
+	 * - `>= 1` = jitter capped at this value
+	 * - Negative/NaN/undefined = no jitter
 	 *
 	 * @example
 	 * ```ts
-	 * { maxDelayTime: 0 }         // retry only instant requests
-	 * { maxDelayTime: 120_000 }   // 120 seconds maximum delay
-	 * { maxDelayTime: -100 }      // unlimited delay
-	 * { maxDelayTime: undefined } // unlimited delay (default)
+	 * // Retry-After: 10s, maxJitter: 5000
+	 * // Actual delay: 10s + random(0, 5s) = 10-15s
+	 *
+	 * // Retry-After: 2s, maxJitter: 5000
+	 * // Actual delay: 2s + random(0, 2s) = 2-4s
 	 * ```
 	 */
-	maxDelayTime?: number;
+	maxJitter?: number;
 };
 
 /**
- * Middleware that automatically retries failed HTTP requests
- * in accordance with the semantics of the `Retry-After` header as defined in
+ * Automatically retries requests based on the `Retry-After` header per
  * [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
  *
- * This middleware applies retry logic exclusively to responses with status codes
- * `429 (Too Many Requests)` or `503 (Service Unavailable)`. Upon receiving such a
- * response, it interprets the `Retry-After` header to determine the appropriate
- * delay interval, waits for that duration, and subsequently reissues
- * the original request — up to the configured maximum number of attempts and
- * within the specified maximum delay time per retry.
+ * Applies to `429` and `503` responses with valid `Retry-After` headers.
  *
- * ### Behavioral summary
- * - **Successful responses** (2xx) are propagated unchanged, even if a `Retry-After`
- *   header is present.
- * - **Missing or invalid `Retry-After` headers** result in no retry; the error response
- *   is returned immediately without throwing an error.
- * - **Numeric `Retry-After` values** are treated as delay-seconds (converted to milliseconds).
- *   Only non-negative integers matching `/^\d+$/` are valid.
- * - **HTTP-date `Retry-After` values** are interpreted as an absolute timestamp in IMF-fixdate format.
- *   Times in the past or present result in zero-delay (immediate retry).
- * - **Exceeding `maxDelayTime`**: If the computed delay exceeds the configured ceiling,
- *   a `DOMException` with name `"AbortError"` is thrown and no retry occurs.
- * - **Exceeding INT32_MAX**: If the computed delay exceeds 2,147,483,647 milliseconds (~24.8 days),
- *   a `DOMException` with name `"AbortError"` is thrown to prevent `setTimeout` overflow behavior
- *   where excessively large delays wrap around to immediate execution.
- * - **Exceeding `maxRetries`**: Once the retry limit is reached, the middleware returns the
- *   last received response without further retries (no error thrown).
- * - **Default behavior**: Without configuration, the middleware retries indefinitely with
- *   unlimited delay waiting (use with caution).
+ * **Behavior:**
+ * - Success (2xx): passed through immediately
+ * - Missing/invalid `Retry-After`: no retry, response returned as-is
+ * - Numeric values: delay-seconds (e.g., `"120"`)
+ * - HTTP-date values: absolute time in IMF-fixdate format
+ * - Full-jitter: added `random(0, min(maxJitter, delay))` jitter on top of `delay` when configured
+ * - Throws `AbortError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days)
+ * - Returns last response when `maxRetries` exhausted (no throw)
  *
- * ### Important limitations
- * **Requests with streaming bodies** (e.g., `ReadableStream`) cannot be retried per the
- * standard Fetch API specification. Attempting to retry such requests will result in a
- * `TypeError` being thrown. To support retries for streamed requests, consider using an
- * additional middleware that provides a *body stream factory* capable of recreating the
- * stream for each retry attempt.
+ * **Streaming bodies:** Cannot be retried per Fetch spec. Use a body factory middleware.
  *
  * @example
  * ```ts
- * // Unlimited retries (use with caution)
- * import { withRetryAfter } from "@qfetch/middleware-retry-after";
- *
- * const qfetch = withRetryAfter()(fetch);
- * const response = await qfetch("https://api.example.com/data");
+ * const qfetch = withRetryAfter({ maxRetries: 3, maxJitter: 5_000 })(fetch);
  * ```
- *
- * @example
- * ```ts
- * // Limited retries with delay ceiling
- * import { withRetryAfter } from "@qfetch/middleware-retry-after";
- *
- * const qfetch = withRetryAfter({
- *   maxRetries: 3,
- *   maxDelayTime: 120_000, // 2 minutes
- * })(fetch);
- *
- * const response = await qfetch("https://api.example.com/data");
- * ```
- *
- * @param opts - Optional configuration parameters controlling retry behavior.
- *               See {@link RetryAfterOptions} for details.
- * @returns A middleware function compatible with `@qfetch/core` that transparently
- *          applies retry logic based on the `Retry-After` response header.
  */
 export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 	opts = {},
@@ -163,6 +90,13 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 		Number.isNaN(opts.maxDelayTime)
 			? undefined
 			: opts.maxDelayTime;
+
+	const maxJitter =
+		typeof opts.maxJitter !== "number" ||
+		opts.maxJitter < 0 ||
+		Number.isNaN(opts.maxJitter)
+			? undefined
+			: opts.maxJitter;
 
 	return (next) => async (input, init) => {
 		let response = await next(input, init);
@@ -197,6 +131,9 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 					"AbortError",
 				);
 
+			// Calculate a jitter to prevent thundering herd
+			const jitter = Math.min(maxJitter ?? 0, Math.random() * delay);
+
 			// Consume the previous response body in case of retry - it is done after the throws on purpose, so other
 			// upstream middleware in the chain that might reference the response can safely use it.
 			await response.body?.cancel("Retry scheduled").catch(() => {
@@ -204,8 +141,8 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 				// potentially consuming resources. However, this is a best-effort cleanup that shouldn't block retries.
 			});
 
-			// Wait before retrying (zero or negative number executes immediately)
-			await waitFor(delay);
+			// Wait before retrying, adding jitter only if it keeps totalDelay within INT32_MAX
+			await waitFor(Math.min(delay + jitter, INT32_MAX));
 
 			// Retry the original request
 			response = await next(input, init);
