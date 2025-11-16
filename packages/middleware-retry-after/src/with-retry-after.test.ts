@@ -1441,4 +1441,393 @@ describe("withRetryAfter middleware", () => {
 			);
 		});
 	});
+
+	describe("Jitter prevents thundering herd by adding random delay", () => {
+		it("should not add jitter when not configured", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(5);
+
+			ctx.beforeEach((ctx: TestContext) => {
+				ctx.mock.timers.enable({ apis: ["setTimeout"] });
+			});
+			ctx.afterEach((ctx: TestContext) => {
+				ctx.mock.timers.reset();
+			});
+
+			await ctx.test("undefined maxJitter", async (ctx: TestContext) => {
+				// arrange
+				ctx.plan(2);
+				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+				const qfetch = withRetryAfter({ maxRetries: 1 })(fetchMock);
+				fetchMock.mock.mockImplementationOnce(
+					async () =>
+						new Response("not ok", {
+							status: 429,
+							headers: { "Retry-After": "10" },
+						}),
+				);
+
+				// act
+				const presponse = qfetch("http://example.local");
+				await flushMicrotasks();
+				ctx.mock.timers.tick(10_000);
+				const response = await presponse;
+
+				// assert
+				ctx.assert.strictEqual(
+					fetchMock.mock.callCount(),
+					2,
+					"Should have retried after exactly 10 seconds without jitter",
+				);
+				ctx.assert.strictEqual(
+					response.status,
+					200,
+					"Should successfully retry without jitter",
+				);
+			});
+
+			await ctx.test("zero maxJitter", async (ctx: TestContext) => {
+				// arrange
+				ctx.plan(2);
+				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+				const qfetch = withRetryAfter({
+					maxRetries: 1,
+					maxJitter: 0,
+				})(fetchMock);
+				fetchMock.mock.mockImplementationOnce(
+					async () =>
+						new Response("not ok", {
+							status: 429,
+							headers: { "Retry-After": "10" },
+						}),
+				);
+
+				// act
+				const presponse = qfetch("http://example.local");
+				await flushMicrotasks();
+				ctx.mock.timers.tick(10_000);
+				const response = await presponse;
+
+				// assert
+				ctx.assert.strictEqual(
+					fetchMock.mock.callCount(),
+					2,
+					"Should have retried after exactly 10 seconds with zero maxJitter",
+				);
+				ctx.assert.strictEqual(
+					response.status,
+					200,
+					"Should successfully retry with zero maxJitter",
+				);
+			});
+
+			await ctx.test("negative maxJitter", async (ctx: TestContext) => {
+				// arrange
+				ctx.plan(2);
+				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+				const qfetch = withRetryAfter({
+					maxRetries: 1,
+					maxJitter: -100,
+				})(fetchMock);
+				fetchMock.mock.mockImplementationOnce(
+					async () =>
+						new Response("not ok", {
+							status: 429,
+							headers: { "Retry-After": "10" },
+						}),
+				);
+
+				// act
+				const presponse = qfetch("http://example.local");
+				await flushMicrotasks();
+				ctx.mock.timers.tick(10_000);
+				const response = await presponse;
+
+				// assert
+				ctx.assert.strictEqual(
+					fetchMock.mock.callCount(),
+					2,
+					"Should have retried after exactly 10 seconds with negative maxJitter",
+				);
+				ctx.assert.strictEqual(
+					response.status,
+					200,
+					"Should successfully retry with negative maxJitter",
+				);
+			});
+
+			await ctx.test("non-numeric maxJitter", async (ctx: TestContext) => {
+				// arrange
+				ctx.plan(2);
+				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+				const qfetch = withRetryAfter({
+					maxRetries: 1,
+					// biome-ignore lint/suspicious/noExplicitAny: we want to test invalid options
+					maxJitter: "invalid" as any,
+				})(fetchMock);
+				fetchMock.mock.mockImplementationOnce(
+					async () =>
+						new Response("not ok", {
+							status: 429,
+							headers: { "Retry-After": "10" },
+						}),
+				);
+
+				// act
+				const presponse = qfetch("http://example.local");
+				await flushMicrotasks();
+				ctx.mock.timers.tick(10_000);
+				const response = await presponse;
+
+				// assert
+				ctx.assert.strictEqual(
+					fetchMock.mock.callCount(),
+					2,
+					"Should have retried after exactly 10 seconds with non-numeric maxJitter",
+				);
+				ctx.assert.strictEqual(
+					response.status,
+					200,
+					"Should successfully retry with non-numeric maxJitter",
+				);
+			});
+
+			await ctx.test("NaN maxJitter", async (ctx: TestContext) => {
+				// arrange
+				ctx.plan(2);
+				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+				const qfetch = withRetryAfter({
+					maxRetries: 1,
+					maxJitter: Number.NaN,
+				})(fetchMock);
+				fetchMock.mock.mockImplementationOnce(
+					async () =>
+						new Response("not ok", {
+							status: 429,
+							headers: { "Retry-After": "10" },
+						}),
+				);
+
+				// act
+				const presponse = qfetch("http://example.local");
+				await flushMicrotasks();
+				ctx.mock.timers.tick(10_000);
+				const response = await presponse;
+
+				// assert
+				ctx.assert.strictEqual(
+					fetchMock.mock.callCount(),
+					2,
+					"Should have retried after exactly 10 seconds with NaN maxJitter",
+				);
+				ctx.assert.strictEqual(
+					response.status,
+					200,
+					"Should successfully retry with NaN maxJitter",
+				);
+			});
+		});
+
+		it("should not add jitter when it would exceed INT32_MAX", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
+			ctx.mock.timers.enable({ apis: ["setTimeout"] });
+			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+			const qfetch = withRetryAfter({
+				maxRetries: 1,
+				maxJitter: 10_000, // 10 seconds max jitter
+			})(fetchMock);
+			// Set Retry-After to INT32_MAX - this is at the edge
+			fetchMock.mock.mockImplementationOnce(
+				async () =>
+					new Response("not ok", {
+						status: 429,
+						headers: { "Retry-After": "2147483" }, // INT32_MAX ms / 1000 = 2147483 seconds
+					}),
+			);
+
+			// act
+			const presponse = qfetch("http://example.local");
+			await flushMicrotasks();
+			// Should retry after exactly INT32_MAX without any jitter added
+			ctx.mock.timers.tick(2_147_483_647);
+
+			// assert
+			await presponse;
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				2,
+				"Should have retried after INT32_MAX without adding jitter",
+			);
+
+			// The total delay should be exactly INT32_MAX (no jitter added)
+			// We verify this by confirming that the retry happened at exactly INT32_MAX
+			ctx.assert.strictEqual(
+				fetchMock.mock.calls[1]?.arguments[0],
+				"http://example.local",
+				"Should have retried with the correct URL",
+			);
+		});
+
+		it("should add jitter when configured", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(3);
+
+			ctx.beforeEach((ctx: TestContext) => {
+				ctx.mock.timers.enable({ apis: ["setTimeout"] });
+			});
+			ctx.afterEach((ctx: TestContext) => {
+				ctx.mock.timers.reset();
+			});
+
+			await ctx.test("positive maxJitter value", async (ctx: TestContext) => {
+				// arrange
+				ctx.plan(2);
+				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+				const qfetch = withRetryAfter({
+					maxRetries: 1,
+					maxJitter: 5_000, // 5 seconds max jitter
+				})(fetchMock);
+				fetchMock.mock.mockImplementationOnce(
+					async () =>
+						new Response("not ok", {
+							status: 429,
+							headers: { "Retry-After": "10" }, // 10 seconds base delay
+						}),
+				);
+
+				// act
+				const presponse = qfetch("http://example.local");
+				await flushMicrotasks();
+				ctx.mock.timers.tick(10_000);
+
+				// assert
+				ctx.assert.strictEqual(
+					fetchMock.mock.callCount(),
+					1,
+					"Should not have retried yet after exactly 10 seconds (jitter not elapsed)",
+				);
+
+				// act - advance to max possible jitter: min(5000, 10000) = 5000ms
+				await flushMicrotasks();
+				ctx.mock.timers.tick(5_000);
+				await presponse;
+
+				// assert
+				ctx.assert.strictEqual(
+					fetchMock.mock.callCount(),
+					2,
+					"Should have retried after Retry-After delay plus jitter (up to 15s total)",
+				);
+			});
+
+			await ctx.test(
+				"jitter capped by maxJitter when delay > maxJitter",
+				async (ctx: TestContext) => {
+					// arrange
+					ctx.plan(3);
+					ctx.mock.method(Math, "random", () => 0.5);
+
+					const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+					const qfetch = withRetryAfter({
+						maxRetries: 1,
+						maxJitter: 3_000, // 3 seconds max jitter
+					})(fetchMock);
+					fetchMock.mock.mockImplementationOnce(
+						async () =>
+							new Response("not ok", {
+								status: 429,
+								headers: { "Retry-After": "10" }, // 10 seconds base delay
+							}),
+					);
+
+					// act
+					const presponse = qfetch("http://example.local");
+					await flushMicrotasks();
+					ctx.mock.timers.tick(10_000);
+
+					// assert
+					ctx.assert.strictEqual(
+						fetchMock.mock.callCount(),
+						1,
+						"Should not have retried yet after base delay",
+					);
+
+					// act - advance by jitter = min(3000, 10000 * 0.5) = 3000ms
+					await flushMicrotasks();
+					ctx.mock.timers.tick(3_000);
+					const response = await presponse;
+
+					// assert
+					ctx.assert.strictEqual(
+						fetchMock.mock.callCount(),
+						2,
+						"Should have retried after base + jitter",
+					);
+					ctx.assert.strictEqual(
+						response.status,
+						200,
+						"Should successfully retry with maxJitter-capped jitter",
+					);
+
+					// cleanup
+					ctx.mock.restoreAll();
+				},
+			);
+
+			await ctx.test(
+				"jitter capped by delay when delay < maxJitter",
+				async (ctx: TestContext) => {
+					// arrange
+					ctx.plan(3);
+					ctx.mock.method(Math, "random", () => 0.5);
+
+					const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+					const qfetch = withRetryAfter({
+						maxRetries: 1,
+						maxJitter: 10_000, // 10 seconds max jitter
+					})(fetchMock);
+					fetchMock.mock.mockImplementationOnce(
+						async () =>
+							new Response("not ok", {
+								status: 429,
+								headers: { "Retry-After": "2" }, // 2 seconds base delay
+							}),
+					);
+
+					// act
+					const presponse = qfetch("http://example.local");
+					await flushMicrotasks();
+					ctx.mock.timers.tick(2_000);
+
+					// assert
+					ctx.assert.strictEqual(
+						fetchMock.mock.callCount(),
+						1,
+						"Should not have retried yet after base delay",
+					);
+
+					// act - advance by jitter = min(10000, 2000 * 0.5) = 1000ms
+					await flushMicrotasks();
+					ctx.mock.timers.tick(1_000);
+					const response = await presponse;
+
+					// assert
+					ctx.assert.strictEqual(
+						fetchMock.mock.callCount(),
+						2,
+						"Should have retried after base + jitter",
+					);
+					ctx.assert.strictEqual(
+						response.status,
+						200,
+						"Should successfully retry with delay-capped jitter",
+					);
+
+					// cleanup
+					ctx.mock.restoreAll();
+				},
+			);
+		});
+	});
 });

@@ -44,8 +44,15 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
 - `maxDelayTime?: number` - Maximum delay in milliseconds for a single retry (default: unlimited)
   - `0` means retry only instant requests (delay must be 0ms, otherwise abort)
   - Positive integers set a ceiling on retry delay duration
-  - If the server's `Retry-After` value exceeds this, an `AbortError` is thrown
   - Negative or non-numeric values mean unlimited delay
+  - If the server's `Retry-After` value exceeds this, an `AbortError` is thrown
+- `maxJitter?: number` - Maximum random jitter using full-jitter strategy (default: no jitter)
+  - `0` means no jitter (deterministic retry timing)
+  - Positive integers set the jitter cap
+  - Negative or non-numeric values mean no jitter
+  - Prevents thundering herd by adding randomness that scales with retry delay
+  - Full-jitter formula: `retryAfterDelay + random(0, min(maxJitter, retryAfterDelay))`
+  - This ensures jitter scales proportionally with short delays while being capped for long delays
 
 #### Behavior
 
@@ -56,9 +63,14 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
   - HTTP-date values are interpreted as absolute future time in IMF-fixdate format
   - Invalid or missing headers prevent retries (no error thrown, response returned as-is)
   - Past dates result in zero-delay retry (immediate retry)
+- **Full-jitter strategy**:
+  - When `maxJitter` is configured, uses full-jitter: `delay + random(0, min(maxJitter, delay))`
+  - Prevents thundering herd by spreading retries across a time window
+  - Jitter automatically scales with the base delay (shorter delays = less jitter, longer delays = more jitter up to cap)
+  - Always respects the minimum delay specified by the server
 - **Error handling**:
-  - Exceeding `maxDelayTime` throws a `DOMException` with name `"AbortError"`
-  - Exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) throws a `DOMException` with name `"AbortError"` to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution
+  - Exceeding `maxDelayTime` throws a `DOMException` with name `"AbortError"` (checked before jitter is applied)
+  - Exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) throws a `DOMException` with name `"AbortError"` to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution (checked before jitter is applied)
   - Exceeding `maxRetries` returns the last response without retrying (no error thrown)
 
 ## Usage
@@ -105,6 +117,28 @@ const qfetch = compose(
 )(fetch);
 
 // Throws AbortError if server requests delay > 60 seconds
+const response = await qfetch('https://api.example.com/data');
+```
+
+### With full-jitter to prevent thundering herd
+
+```typescript
+import { withRetryAfter } from '@qfetch/middleware-retry-after';
+import { compose } from '@qfetch/core';
+
+const qfetch = compose(
+  withRetryAfter({
+    maxRetries: 5,
+    maxJitter: 5_000 // Cap jitter at 5 seconds
+  })
+)(fetch);
+
+// Full-jitter examples:
+// - Retry-After: 10s  → actual delay: 10s + random(0, 5s)   = 10-15s
+// - Retry-After: 2s   → actual delay: 2s + random(0, 2s)    = 2-4s
+// - Retry-After: 120s → actual delay: 120s + random(0, 5s)  = 120-125s
+//
+// This spreads retry attempts across a time window, preventing thundering herd
 const response = await qfetch('https://api.example.com/data');
 ```
 

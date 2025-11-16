@@ -281,6 +281,35 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 				return;
 			}
 
+			// Route: /jitter-test - Returns 429 with configurable delay for jitter testing
+			if (path === "/jitter-test") {
+				if (requestCount <= 1) {
+					const retryAfter = url.searchParams.get("delay") || "1";
+					res.writeHead(429, {
+						"Content-Type": "application/json",
+						"Retry-After": retryAfter,
+					});
+					res.end(
+						JSON.stringify({
+							error: "Too Many Requests",
+							requestCount,
+							retryAfter,
+							timestamp: Date.now(),
+						}),
+					);
+					return;
+				}
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(
+					JSON.stringify({
+						message: "Success after retry!",
+						requestCount,
+						timestamp: Date.now(),
+					}),
+				);
+				return;
+			}
+
 			// Default 404
 			res.writeHead(404, { "Content-Type": "application/json" });
 			res.end(JSON.stringify({ error: "Not Found" }));
@@ -665,6 +694,96 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 				data.requestCount,
 				3,
 				"Should make 3 requests (429 + 503 + success)",
+			);
+		});
+	});
+
+	describe("Jitter prevents thundering herd", () => {
+		it("should use full-jitter strategy with delay longer than base", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(3);
+			const { baseUrl } = await createTestServer(ctx);
+			const qfetch = withRetryAfter({
+				maxRetries: 3,
+				maxJitter: 1_000, // 1 second max jitter
+			})(fetch);
+
+			// act
+			const startTime = Date.now();
+			const response = await qfetch(`${baseUrl}/jitter-test?delay=1`, {
+				signal: ctx.signal,
+			}); // 1 second base delay, jitter = random(0, min(1000, 1000)) = random(0, 1000)
+			const duration = Date.now() - startTime;
+			await response.json();
+
+			// assert
+			ctx.assert.strictEqual(
+				response.status,
+				200,
+				"Response status should be 200 after retry with full-jitter",
+			);
+			ctx.assert.ok(
+				duration >= 1000,
+				`Should wait at least the base delay (actual: ${duration}ms)`,
+			);
+			ctx.assert.ok(
+				duration <= 2500,
+				`Should not exceed base + min(maxJitter, delay) + overhead (actual: ${duration}ms)`,
+			);
+		});
+
+		it("should retry deterministically without jitter when maxJitter is not set", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
+			const { baseUrl } = await createTestServer(ctx);
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch); // No jitter
+
+			// act
+			const startTime = Date.now();
+			const response = await qfetch(`${baseUrl}/jitter-test?delay=1`, {
+				signal: ctx.signal,
+			});
+			const duration = Date.now() - startTime;
+			await response.json();
+
+			// assert
+			ctx.assert.strictEqual(
+				response.status,
+				200,
+				"Response status should be 200 after retry without jitter",
+			);
+			ctx.assert.ok(
+				duration >= 1000 && duration <= 1500,
+				`Should wait approximately the base delay without jitter (actual: ${duration}ms)`,
+			);
+		});
+
+		it("should work with zero maxJitter (no jitter)", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
+			const { baseUrl } = await createTestServer(ctx);
+			const qfetch = withRetryAfter({
+				maxRetries: 3,
+				maxJitter: 0, // Explicitly no jitter
+			})(fetch);
+
+			// act
+			const startTime = Date.now();
+			const response = await qfetch(`${baseUrl}/jitter-test?delay=1`, {
+				signal: ctx.signal,
+			});
+			const duration = Date.now() - startTime;
+			await response.json();
+
+			// assert
+			ctx.assert.strictEqual(
+				response.status,
+				200,
+				"Response status should be 200 after retry with zero jitter",
+			);
+			ctx.assert.ok(
+				duration >= 1000 && duration <= 1500,
+				`Should wait approximately the base delay with zero jitter (actual: ${duration}ms)`,
 			);
 		});
 	});
