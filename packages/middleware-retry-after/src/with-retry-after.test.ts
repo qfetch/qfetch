@@ -1830,4 +1830,43 @@ describe("withRetryAfter middleware", () => {
 			);
 		});
 	});
+
+	describe("Respects global cancellation", () => {
+		it("should abort during waiting", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(2);
+			ctx.mock.timers.enable({ apis: ["setTimeout"] });
+			const controller = new AbortController();
+			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+			fetchMock.mock.mockImplementationOnce(
+				async () =>
+					new Response("not ok", {
+						status: 429,
+						headers: { "Retry-After": "10" },
+					}),
+			);
+
+			// act
+			const presponse = qfetch("http://example.local", {
+				signal: controller.signal,
+			});
+			await flushMicrotasks();
+			ctx.mock.timers.tick(5_000);
+			controller.abort();
+			ctx.mock.timers.tick(5_000);
+
+			// assert
+			await ctx.assert.rejects(
+				() => presponse,
+				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
+				"Should throw AbortError when signal is aborted while waiting for retry",
+			);
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				1,
+				"Should only have made initial request before abort during wait",
+			);
+		});
+	});
 });

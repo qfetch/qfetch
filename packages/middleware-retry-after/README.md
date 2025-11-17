@@ -64,6 +64,10 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
   - Exceeding `maxDelayTime` throws a `DOMException` with name `"AbortError"` (checked before jitter is applied)
   - Exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) throws a `DOMException` with name `"AbortError"` to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution (checked before jitter is applied)
   - Exceeding `maxRetries` returns the last response without retrying (no error thrown)
+- **Cancellation support**:
+  - Respects `AbortSignal` passed via request options or `Request` object
+  - Cancellation during retry wait period immediately aborts with `AbortError`
+  - Cancellation during retry request execution propagates the abort signal to the fetch call
 
 ## Usage
 
