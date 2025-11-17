@@ -787,4 +787,148 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 			);
 		});
 	});
+
+	describe("Signal cancellation", () => {
+		it("should abort immediately when signal is already aborted", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(1);
+			const { baseUrl } = await createTestServer(ctx);
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
+			const controller = new AbortController();
+			controller.abort();
+
+			// act & assert
+			await ctx.assert.rejects(
+				() => qfetch(`${baseUrl}/success`, { signal: controller.signal }),
+				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
+				"Should throw AbortError when signal is already aborted",
+			);
+		});
+
+		it("should abort during retry delay", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(1);
+			const { baseUrl } = await createTestServer(ctx);
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
+			const controller = new AbortController();
+
+			// act
+			const promise = qfetch(`${baseUrl}/retry-429?delay=5`, {
+				signal: controller.signal,
+			});
+
+			// Wait a bit then abort during the retry delay
+			setTimeout(() => controller.abort(), 1000);
+
+			// assert
+			await ctx.assert.rejects(
+				() => promise,
+				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
+				"Should throw AbortError when signal is aborted during retry delay",
+			);
+		});
+
+		it("should abort during initial request", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(1);
+			const { baseUrl } = await createTestServer(ctx);
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
+			const controller = new AbortController();
+
+			// act
+			const promise = qfetch(`${baseUrl}/retry-429?delay=1`, {
+				signal: controller.signal,
+			});
+
+			// Abort immediately before any request completes
+			controller.abort();
+
+			// assert
+			await ctx.assert.rejects(
+				() => promise,
+				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
+				"Should throw AbortError when signal is aborted during initial request",
+			);
+		});
+
+		it("should abort between multiple retries", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(1);
+			const { baseUrl } = await createTestServer(ctx);
+			const qfetch = withRetryAfter({ maxRetries: 5 })(fetch);
+			const controller = new AbortController();
+
+			// act
+			const promise = qfetch(`${baseUrl}/multiple-retries`, {
+				signal: controller.signal,
+			});
+
+			// Wait for first retry to complete, then abort during second retry delay
+			setTimeout(() => controller.abort(), 1500);
+
+			// assert
+			await ctx.assert.rejects(
+				() => promise,
+				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
+				"Should throw AbortError when signal is aborted between retries",
+			);
+		});
+
+		it("should propagate abort signal to underlying fetch", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(1);
+			const { baseUrl } = await createTestServer(ctx);
+			const qfetch = withRetryAfter({ maxRetries: 3 })(fetch);
+			const controller = new AbortController();
+
+			// act
+			const promise = qfetch(`${baseUrl}/success`, {
+				signal: controller.signal,
+			});
+			controller.abort();
+
+			// assert
+			await ctx.assert.rejects(
+				() => promise,
+				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
+				"Should propagate abort signal to underlying fetch",
+			);
+		});
+
+		it("should not retry after signal is aborted", async (ctx: TestContext) => {
+			// arrange
+			ctx.plan(1);
+			const { baseUrl } = await createTestServer(ctx);
+			let requestCount = 0;
+
+			// Create a custom fetch that counts requests
+			const countingFetch: typeof fetch = async (input, init) => {
+				requestCount++;
+				return fetch(input, init);
+			};
+
+			const qfetch = withRetryAfter({ maxRetries: 5 })(countingFetch);
+			const controller = new AbortController();
+
+			// act
+			const promise = qfetch(`${baseUrl}/multiple-retries`, {
+				signal: controller.signal,
+			});
+
+			// Abort very quickly
+			setTimeout(() => controller.abort(), 50);
+
+			// assert
+			await ctx.assert.rejects(
+				() => promise,
+				(e: unknown) => {
+					// Should have made at most 2 requests before abort kicked in
+					const aborted = e instanceof DOMException && e.name === "AbortError";
+					const limitedRequests = requestCount <= 2;
+					return aborted && limitedRequests;
+				},
+				"Should not make additional requests after signal is aborted",
+			);
+		});
+	});
 });
