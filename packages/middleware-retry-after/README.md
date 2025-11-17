@@ -4,7 +4,7 @@ Fetch middleware that automatically retries requests based on the `Retry-After` 
 
 ## Overview
 
-Implements automatic retry logic following [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3) semantics for `429 (Too Many Requests)` and `503 (Service Unavailable)` responses. When the server responds with these status codes and a valid `Retry-After` header, this middleware will automatically wait and retry the request according to the server's guidance.
+Implements automatic retry logic following [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3) and [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585.html#section-4) semantics for `429 (Too Many Requests)` and `503 (Service Unavailable)` responses. When the server responds with these status codes and a valid `Retry-After` header, this middleware will automatically wait and retry the request according to the server's guidance.
 
 Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
@@ -16,12 +16,7 @@ Intended for use with the composable middleware system provided by [`@qfetch/cor
 > **Non-Replayable Bodies (Streaming Bodies)**  
 > Requests whose body is a non-replayable type — such as `ReadableStream` — **cannot be retried** according to the Fetch specification. Attempting to retry such requests results in a `TypeError` because the body stream has already been consumed.  
 >  
-> To support retries for streaming bodies, you must provide a *body factory* using a middleware that creates a **fresh stream** for each retry.
-
-> **Note**  
-> These semantics apply consistently across browser Fetch and Node.js Fetch:  
-> - Replayable bodies → safe to retry  
-> - Streams → require a factory
+> To support retries for streaming bodies, you must provide a *body factory* using a middleware downstream that creates a **fresh stream** for each retry.
 
 ## Installation
 
@@ -50,19 +45,16 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
   - `0` means no jitter (deterministic retry timing)
   - Positive integers set the jitter cap
   - Negative or non-numeric values mean no jitter
-  - Prevents thundering herd by adding randomness that scales with retry delay
-  - Full-jitter formula: `retryAfterDelay + random(0, min(maxJitter, retryAfterDelay))`
-  - This ensures jitter scales proportionally with short delays while being capped for long delays
 
 #### Behavior
 
 - **Successful responses** (status 2xx) are returned immediately, even with a `Retry-After` header
 - **Retryable statuses** (`429` or `503`) trigger retry logic when a valid `Retry-After` header is present
 - **Retry-After parsing**:
-  - Numeric values are interpreted as seconds (only non-negative integers matching `/^\d+$/` are valid)
-  - HTTP-date values are interpreted as absolute future time in IMF-fixdate format
-  - Invalid or missing headers prevent retries (no error thrown, response returned as-is)
+  - Numeric values are interpreted as seconds (only non-negative integers)
+  - Date values are interpreted as absolute future time (only HTTP-date IMF-fixdate format)
   - Past dates result in zero-delay retry (immediate retry)
+  - Invalid or missing headers prevent retries (no error thrown, response returned as-is)
 - **Full-jitter strategy**:
   - When `maxJitter` is configured, uses full-jitter: `delay + random(0, min(maxJitter, delay))`
   - Prevents thundering herd by spreading retries across a time window
@@ -149,8 +141,8 @@ import { withRetryAfter } from '@qfetch/middleware-retry-after';
 import { compose } from '@qfetch/core';
 
 const qfetch = compose(
+	// other middlewares...
   withRetryAfter({ maxRetries: 3 }),
-  // other middlewares...
 )(fetch);
 
 await qfetch('https://api.example.com/data');
@@ -158,8 +150,5 @@ await qfetch('https://api.example.com/data');
 
 ## Notes
 
-- This middleware respects the server's rate-limiting guidance through the standard `Retry-After` header
-- It only retries on `429 (Too Many Requests)` and `503 (Service Unavailable)` status codes
 - Requests are retried with the exact same parameters (URL, method, headers, body, etc.)
-- The middleware waits asynchronously during retry delays using `setTimeout`
-- Zero or negative retry delays from the server execute immediately
+- The middleware always schedules a microtask before retrying
