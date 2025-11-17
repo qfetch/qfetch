@@ -64,10 +64,14 @@ export type RetryAfterOptions = {
  * - Full-jitter: jitter on top of `delay` when configured
  * - Throws `AbortError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days)
  * - Returns last response when `maxRetries` exhausted (no throw)
+ * - Respects `AbortSignal` from request options or `Request` object for cancellation
  *
  * **Streaming bodies:** Cannot be retried per Fetch spec. Use a body factory middleware downstream.
  *
- * @throws {DOMException} `AbortError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days)
+ * **Cancellation:** Honors `AbortSignal` during retry waits and request execution. Aborting the signal
+ * immediately cancels pending retries and throws `AbortError`.
+ *
+ * @throws {DOMException} `AbortError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days), or when request is cancelled via `AbortSignal`
  * @example
  * ```ts
  * const qfetch = withRetryAfter({ maxRetries: 3, maxJitter: 60_000 })(fetch);
@@ -101,6 +105,10 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 			: opts.maxJitter;
 
 	return (next) => async (input, init) => {
+		// Extract the signal for this request
+		const requestSignal =
+			init?.signal ?? (input instanceof Request ? input.signal : undefined);
+
 		let response = await next(input, init);
 
 		for (
@@ -144,7 +152,7 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 			});
 
 			// Wait before retrying, adding jitter only if it keeps totalDelay within INT32_MAX
-			await waitFor(Math.min(delay + jitter, INT32_MAX));
+			await waitFor(Math.min(delay + jitter, INT32_MAX), requestSignal);
 
 			// Retry the original request
 			response = await next(input, init);
@@ -160,9 +168,19 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
  * @param delay - Duration to wait in milliseconds. Negative values are treated as zero.
  * @returns A promise that resolves after the delay has elapsed.
  */
-const waitFor = (delay: number): Promise<void> => {
-	return new Promise<void>((resolve) => {
-		setTimeout(resolve, delay);
+const waitFor = (delay: number, signal?: AbortSignal): Promise<void> => {
+	return new Promise<void>((resolve, reject) => {
+		const timer = setTimeout(() => {
+			signal?.removeEventListener("abort", listener);
+			resolve();
+		}, delay);
+
+		const listener: EventListener = () => {
+			clearTimeout(timer);
+			reject(signal?.reason);
+		};
+
+		signal?.addEventListener("abort", listener);
 	});
 };
 
