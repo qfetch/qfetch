@@ -10,24 +10,27 @@ import type { Middleware } from "@qfetch/core";
  */
 export type RetryAfterOptions = {
 	/**
-	 * Maximum number of retry attempts. Default: unlimited.
+	 * Maximum number of retry attempts.
 	 * - `0` = no retries
 	 * - `>= 1` = limit retry attempts
 	 * - Negative/NaN/undefined = unlimited
+	 *  @default undefined
 	 */
 	maxRetries?: number;
 
 	/**
-	 * Maximum delay in milliseconds for a single retry. Default: unlimited.
-	 * Throws `AbortError` if `Retry-After` exceeds this value.
+	 * Maximum delay in milliseconds for a single retry.
 	 * - `0` = only instant retries
 	 * - `>= 1` = ceiling on delay
 	 * - Negative/NaN/undefined = unlimited
+	 *
+	 * Throws `AbortError` if `Retry-After` exceeds this value.
+	 * @default undefined
 	 */
 	maxDelayTime?: number;
 
 	/**
-	 * Maximum random jitter in milliseconds using full-jitter strategy. Default: no jitter.
+	 * Maximum random jitter in milliseconds using full-jitter strategy.
 	 * Prevents thundering herd by adding randomness to retry timing.
 	 *
 	 * Full-jitter formula: `retryAfterDelay + random(0, min(maxJitter, retryAfterDelay))`
@@ -37,6 +40,7 @@ export type RetryAfterOptions = {
 	 * - `>= 1` = jitter capped at this value
 	 * - Negative/NaN/undefined = no jitter
 	 *
+	 * @default 0
 	 * @example
 	 * ```ts
 	 * // Retry-After: 10s, maxJitter: 5000
@@ -50,33 +54,31 @@ export type RetryAfterOptions = {
 };
 
 /**
- * Automatically retries requests based on the `Retry-After` header per
- * [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
- *
- * Applies to `429` and `503` responses with valid `Retry-After` headers.
+ * Automatically retries requests on `429` and `503` responses with valid `Retry-After` headers.
  *
  * **Behavior:**
  * - Success (2xx): passed through immediately
  * - Missing/invalid `Retry-After`: no retry, response returned as-is
- * - Numeric values: delay-seconds (e.g., `"120"`)
- * - HTTP-date values: absolute time in IMF-fixdate format
- * - Full-jitter: added `random(0, min(maxJitter, delay))` jitter on top of `delay` when configured
+ * - Numeric values: delay-seconds
+ * - HTTP-date values: absolute future time, past dates are zero-delay
+ * - Full-jitter: jitter on top of `delay` when configured
  * - Throws `AbortError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days)
  * - Returns last response when `maxRetries` exhausted (no throw)
  *
- * **Streaming bodies:** Cannot be retried per Fetch spec. Use a body factory middleware.
+ * **Streaming bodies:** Cannot be retried per Fetch spec. Use a body factory middleware downstream.
  *
+ * @throws {DOMException} `AbortError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days)
  * @example
  * ```ts
- * const qfetch = withRetryAfter({ maxRetries: 3, maxJitter: 5_000 })(fetch);
+ * const qfetch = withRetryAfter({ maxRetries: 3, maxJitter: 60_000 })(fetch);
  * ```
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc6585.html#section-4 RFC 6585 §4 — 429 Too Many Requests}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.4 RFC 9110 §15.6.4 — 503 Service Unavailable}
  */
 export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 	opts = {},
 ) => {
-	const statuses = new Set([429, 503]);
-	const header = "Retry-After";
-
 	const maxRetries =
 		typeof opts.maxRetries !== "number" ||
 		opts.maxRetries < 0 ||
@@ -107,12 +109,12 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 			attempt += 1
 		) {
 			// If successful or not a retryable status, passthrough the response
-			if (response.ok || !statuses.has(response.status)) {
+			if (response.ok || !RETRYABLE_STATUSES.has(response.status)) {
 				break;
 			}
 
 			// Check for Retry-After header
-			const delay = parseRetryAfter(response.headers.get(header));
+			const delay = parseRetryAfter(response.headers.get(RETRY_AFTER_HEADER));
 
 			// If no Retry-After header, passthrough the response
 			if (delay === null) break;
@@ -166,32 +168,40 @@ const waitFor = (delay: number): Promise<void> => {
 
 /**
  * Regular expression matching a `Retry-After` header value expressed as
- * *delta-seconds*, as defined in [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
+ * *delta-seconds*.
  *
- * A valid delta-seconds value consists solely of one or more ASCII digits.
- * Example: `"120"`.
- *
- * @see RFC 9110 §10.2.3 — Retry-After
+ * @example "120"
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
  */
-const RFC_9110_DELTA_SECONDS = /^\d+$/;
+const DELTA_SECONDS = /^\d+$/;
 
 /**
  * Regular expression matching a `Retry-After` header value expressed as an
- * *HTTP-date*, in the IMF-fixdate format defined by
- * [RFC 9110 §5.6.7](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.7).
+ * *HTTP-date*, in the IMF-fixdate format.
  *
- * This format corresponds to dates such as `"Wed, 21 Oct 2015 07:28:00 GMT"`.
- * The pattern enforces:
- * - A three-letter weekday abbreviation with an initial capital (e.g. `Mon`–`Sun`)
- * - A two-digit day, three-letter month, four-digit year
- * - A 24-hour time in `HH:MM:SS` format
- * - A literal `"GMT"` timezone designator
- *
- * @see RFC 9110 §5.6.7 — Date/Time Formats
- * @see RFC 9110 §10.2.3 — Retry-After
+ * @example "Wed, 21 Oct 2015 07:28:00 GMT"
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.7 RFC 9110 §5.6.7 — Date/Time Formats}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
  */
-const RFC_9110_HTTP_DATE =
+const HTTP_DATE =
 	/^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+
+/**
+ * HTTP status codes that indicate a retryable condition.
+ * - `429`: Too Many Requests
+ * - `503`: Service Unavailable
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc6585.html#section-4 RFC 6585 §4 — 429 Too Many Requests}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.4 RFC 9110 §15.6.4 — 503 Service Unavailable}
+ */
+const RETRYABLE_STATUSES = new Set([429, 503]);
+
+/**
+ * The `Retry-After` header name.
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
+ */
+const RETRY_AFTER_HEADER = "Retry-After";
 
 /**
  * Maximum signed 32-bit integer (2^31 − 1).
@@ -203,7 +213,7 @@ const RFC_9110_HTTP_DATE =
 const INT32_MAX = 0x7fffffff;
 
 /**
- * Parses a `Retry-After` header according to RFC 9110 §10.2.3.
+ * Parses a `Retry-After` header.
  *
  * - If the value is an integer, it is interpreted as a delay in seconds since the parsing.
  * - If the value is an HTTP-date, it is interpreted as the difference
@@ -212,17 +222,18 @@ const INT32_MAX = 0x7fffffff;
  *
  * @param value - The raw `Retry-After` header value.
  * @returns The delay duration in milliseconds, or `null` if invalid.
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
  */
 const parseRetryAfter = (value: string | null): null | number => {
 	if (value === null) return null;
 
-	if (RFC_9110_DELTA_SECONDS.test(value)) {
+	if (DELTA_SECONDS.test(value)) {
 		const seconds = Number(value);
 		const milliseconds = seconds * 1000;
 		return Number.isSafeInteger(milliseconds) ? milliseconds : null;
 	}
 
-	if (RFC_9110_HTTP_DATE.test(value)) {
+	if (HTTP_DATE.test(value)) {
 		const date = new Date(value);
 		const difference = Math.max(0, date.getTime() - Date.now());
 		return Number.isSafeInteger(difference) ? difference : null;
