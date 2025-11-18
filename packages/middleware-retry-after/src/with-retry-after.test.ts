@@ -955,7 +955,8 @@ describe("withRetryAfter middleware", () => {
 				// assert
 				await ctx.assert.rejects(
 					() => presponse,
-					(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+					(e: unknown) =>
+						e instanceof DOMException && e.name === "ConstraintError",
 					"Should throw ConstraintError when computed delay exceeds maxDelayTime",
 				);
 				ctx.assert.strictEqual(
@@ -988,7 +989,8 @@ describe("withRetryAfter middleware", () => {
 				// assert
 				await ctx.assert.rejects(
 					() => presponse,
-					(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+					(e: unknown) =>
+						e instanceof DOMException && e.name === "ConstraintError",
 					"Should throw ConstraintError when delay exceeds zero maxDelayTime",
 				);
 				ctx.assert.strictEqual(
@@ -1020,7 +1022,8 @@ describe("withRetryAfter middleware", () => {
 			// assert
 			await ctx.assert.rejects(
 				() => presponse,
-				(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+				(e: unknown) =>
+					e instanceof DOMException && e.name === "ConstraintError",
 				"Should throw ConstraintError when delay exceeds INT32_MAX",
 			);
 			ctx.assert.strictEqual(
