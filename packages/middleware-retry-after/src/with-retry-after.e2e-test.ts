@@ -508,7 +508,8 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 					qfetch(`${baseUrl}/exceeds-int32`, {
 						signal: ctx.signal,
 					}),
-				(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+				(e: unknown) =>
+					e instanceof DOMException && e.name === "ConstraintError",
 				"Should throw ConstraintError when Retry-After exceeds INT32_MAX",
 			);
 		});
@@ -527,7 +528,8 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 			// act & assert
 			await ctx.assert.rejects(
 				() => qfetch(`${baseUrl}/retry-429?delay=2`, { signal: ctx.signal }), // 2 seconds > 500ms
-				(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+				(e: unknown) =>
+					e instanceof DOMException && e.name === "ConstraintError",
 				"Should throw ConstraintError when delay exceeds maxDelayTime",
 			);
 		});
