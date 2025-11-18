@@ -102,7 +102,7 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 		typeof opts.maxJitter !== "number" ||
 		opts.maxJitter < 0 ||
 		Number.isNaN(opts.maxJitter)
-			? undefined
+			? 0
 			: opts.maxJitter;
 
 	return (next) => async (input, init) => {
@@ -143,7 +143,7 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 				);
 
 			// Calculate a jitter to prevent thundering herd
-			const jitter = Math.min(maxJitter ?? 0, Math.random() * delay);
+			const jitter = Math.min(maxJitter, Math.random() * delay);
 
 			// Consume the previous response body in case of retry - it is done after the throws on purpose, so other
 			// upstream middleware in the chain that might reference the response can safely use it.
