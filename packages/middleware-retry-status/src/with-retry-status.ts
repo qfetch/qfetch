@@ -1,0 +1,139 @@
+import type { Middleware } from "@qfetch/core";
+
+/**
+ * Configuration options for the {@link withRetryStatus } middleware.
+ *
+ * [TODO: Add detailed description of what these options control and their purpose.
+ * Reference relevant web standards (RFC, MDN, etc.) if applicable.]
+ *
+ * @example
+ * ```ts
+ * // Example with default configuration
+ * const opts: RetryStatusOptions = {
+ *   // TODO: Add realistic option examples
+ * };
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Example with alternative configuration
+ * const opts: RetryStatusOptions = {
+ *   // TODO: Add alternative configuration example
+ * };
+ * ```
+ */
+export type RetryStatusOptions = {
+	/**
+	 * [TODO: Describe this option's purpose and behavior.]
+	 *
+	 * - [TODO: Document valid values and their meanings]
+	 * - [TODO: Document edge cases or special values]
+	 * - [TODO: Document default behavior]
+	 *
+	 * @default [TODO: default value or undefined]
+	 *
+	 * @example
+	 * ```ts
+	 * { option: value }  // TODO: describe this example
+	 * ```
+	 */
+	// option?: type;
+};
+
+/**
+ * Middleware that [TODO: brief description of what this middleware does].
+ *
+ * [TODO: Add more detailed description explaining the middleware's purpose,
+ * when to use it, and how it integrates with the fetch API. Reference relevant
+ * web standards (RFC, MDN, etc.) if applicable.]
+ *
+ * ### Behavioral summary
+ * - **[TODO: Key behavior 1]**: [Detailed explanation]
+ * - **[TODO: Key behavior 2]**: [Detailed explanation]
+ * - **[TODO: Edge case handling]**: [Explanation of how edge cases are handled]
+ *
+ * ### Important limitations
+ * [TODO: Document any known limitations, constraints, or gotchas that users
+ * should be aware of. For example, incompatibilities with certain request types,
+ * browser limitations, performance considerations, etc.]
+ *
+ * @example
+ * ```ts
+ * // Basic usage
+ * import { withRetryStatus } from "@qfetch/middleware-retry-status";
+ *
+ * const qfetch = withRetryStatus()(fetch);
+ * const response = await qfetch("https://example.com");
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Usage with options
+ * import { withRetryStatus } from "@qfetch/middleware-retry-status";
+ *
+ * const qfetch = withRetryStatus({
+ *   // TODO: Add realistic configuration
+ * })(fetch);
+ *
+ * const response = await qfetch("https://example.com");
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Composition with other middlewares
+ * import { withRetryStatus } from "@qfetch/middleware-retry-status";
+ * import { compose } from "@qfetch/core";
+ *
+ * const qfetch = compose(
+ *   withRetryStatus(),
+ *   // other middlewares...
+ * )(fetch);
+ *
+ * const response = await qfetch("https://example.com");
+ * ```
+ *
+ * @param opts - Optional configuration parameters controlling middleware behavior.
+ *               See {@link RetryStatusOptions} for details.
+ * @returns A middleware function compatible with `@qfetch/core` that [TODO: describe
+ *          what transformation/behavior this middleware applies].
+ */
+export const withRetryStatus: Middleware<RetryStatusOptions | undefined> = (
+	opts = {},
+) => {
+	// TODO: Extract and validate options
+	// const {} = opts;
+
+	// TODO: Add any initialization logic, constants, or helper setup here
+	// Example: const headerName = "X-Custom-Header";
+	// Example: const validStatuses = new Set([200, 201, 204]);
+
+	return (next) => async (input, init) => {
+		// TODO: Implement pre-request logic (request transformation, validation, etc.)
+
+		// Execute the next middleware or fetch
+		const response = await next(input, init);
+
+		// TODO: Implement post-response logic (response transformation, error handling, etc.)
+
+		return response;
+	};
+};
+
+// TODO: Add helper functions below if needed
+// /**
+//  * [Helper function description]
+//  *
+//  * @param param - [parameter description]
+//  * @returns [return value description]
+//  */
+// const helperFunction = (param: type): returnType => {
+//   // implementation
+// };
+
+// TODO: Add constants with documentation if needed
+// /**
+//  * [Constant description and purpose]
+//  *
+//  * @see [Link to relevant standard or documentation]
+//  */
+// const CONSTANT_NAME = value;
