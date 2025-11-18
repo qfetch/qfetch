@@ -496,7 +496,7 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 	});
 
 	describe("INT32_MAX boundary tests", () => {
-		it("should throw AbortError when Retry-After exceeds INT32_MAX", async (ctx: TestContext) => {
+		it("should throw ConstraintError when Retry-After exceeds INT32_MAX", async (ctx: TestContext) => {
 			// arrange
 			ctx.plan(1);
 			const { baseUrl } = await createTestServer(ctx);
@@ -508,8 +508,8 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 					qfetch(`${baseUrl}/exceeds-int32`, {
 						signal: ctx.signal,
 					}),
-				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
-				"Should throw AbortError when Retry-After exceeds INT32_MAX",
+				(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+				"Should throw ConstraintError when Retry-After exceeds INT32_MAX",
 			);
 		});
 	});
@@ -527,8 +527,8 @@ describe("withRetryAfter middleware - E2E tests", { concurrency: true }, () => {
 			// act & assert
 			await ctx.assert.rejects(
 				() => qfetch(`${baseUrl}/retry-429?delay=2`, { signal: ctx.signal }), // 2 seconds > 500ms
-				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
-				"Should throw AbortError when delay exceeds maxDelayTime",
+				(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+				"Should throw ConstraintError when delay exceeds maxDelayTime",
 			);
 		});
 
