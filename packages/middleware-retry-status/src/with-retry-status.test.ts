@@ -1,0 +1,93 @@
+import { describe, suite, test, type TestContext } from "node:test";
+
+import { type RetryStatusOptions, withRetryStatus } from "./with-retry-status.ts";
+
+/* node:coverage disable */
+suite("withRetryStatus - Unit", () => {
+	// Helper function example: use for common test utilities
+	// Example: const flushMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
+
+	describe("behavior description from user perspective", () => {
+		test("expected observable behavior", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(1);
+			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+			const qfetch = withRetryStatus()(fetchMock);
+
+			// Act
+			const response = await qfetch("https://example.com");
+			const body = await response.text();
+
+			// Assert
+			ctx.assert.strictEqual(
+				body,
+				"ok",
+				"assertion message describing expected outcome",
+			);
+		});
+
+		// For testing multiple variations of the same behavior
+		test("behavior with different inputs", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2); // Number of sub-tests
+
+			await ctx.test("specific value case 1", async (ctx: TestContext) => {
+				// Arrange
+				ctx.plan(1);
+				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+				const qfetch = withRetryStatus()(fetchMock);
+
+				// Act
+				const response = await qfetch("https://example.com");
+				const body = await response.text();
+
+				// Assert
+				ctx.assert.strictEqual(body, "ok", "assertion message");
+			});
+
+			await ctx.test("specific value case 2", async (ctx: TestContext) => {
+				// Arrange
+				ctx.plan(1);
+				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+				const qfetch = withRetryStatus()(fetchMock);
+
+				// Act
+				const response = await qfetch("https://example.com");
+				const body = await response.text();
+
+				// Assert
+				ctx.assert.strictEqual(body, "ok", "assertion message");
+			});
+		});
+	});
+
+	// Example: Testing time-based behavior with mock timers
+	// describe("time-based behavior", () => {
+	// 	test("time-based behavior description", async (ctx: TestContext) => {
+	// 		// Arrange
+	// 		ctx.plan(2);
+	// 		ctx.mock.timers.enable({ apis: ["setTimeout"] });
+	// 		const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+	// 		const qfetch = withRetryStatus()(fetchMock);
+	//
+	// 		// Act
+	// 		const presponse = qfetch("https://example.com");
+	// 		await flushMicrotasks();
+	// 		ctx.mock.timers.tick(1000); // Advance time by 1 second
+	//
+	// 		// Assert
+	// 		ctx.assert.strictEqual(
+	// 			fetchMock.mock.callCount(),
+	// 			1,
+	// 			"calls fetch once after delay",
+	// 		);
+	//
+	// 		// Act
+	// 		const response = await presponse;
+	// 		const body = await response.text();
+	//
+	// 		// Assert
+	// 		ctx.assert.strictEqual(body, "ok", "returns successful response");
+	// 	});
+	// });
+});
