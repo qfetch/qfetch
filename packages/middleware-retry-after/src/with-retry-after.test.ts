@@ -955,8 +955,8 @@ describe("withRetryAfter middleware", () => {
 				// assert
 				await ctx.assert.rejects(
 					() => presponse,
-					(e: unknown) => e instanceof DOMException && e.name === "AbortError",
-					"Should throw AbortError when computed delay exceeds maxDelayTime",
+					(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+					"Should throw ConstraintError when computed delay exceeds maxDelayTime",
 				);
 				ctx.assert.strictEqual(
 					fetchMock.mock.callCount(),
@@ -988,8 +988,8 @@ describe("withRetryAfter middleware", () => {
 				// assert
 				await ctx.assert.rejects(
 					() => presponse,
-					(e: unknown) => e instanceof DOMException && e.name === "AbortError",
-					"Should throw AbortError when delay exceeds zero maxDelayTime",
+					(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+					"Should throw ConstraintError when delay exceeds zero maxDelayTime",
 				);
 				ctx.assert.strictEqual(
 					fetchMock.mock.callCount(),
@@ -1020,8 +1020,8 @@ describe("withRetryAfter middleware", () => {
 			// assert
 			await ctx.assert.rejects(
 				() => presponse,
-				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
-				"Should throw AbortError when delay exceeds INT32_MAX",
+				(e: unknown) => e instanceof DOMException && e.name === "ConstraintError",
+				"Should throw ConstraintError when delay exceeds INT32_MAX",
 			);
 			ctx.assert.strictEqual(
 				fetchMock.mock.callCount(),

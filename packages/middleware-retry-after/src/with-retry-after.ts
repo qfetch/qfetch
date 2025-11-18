@@ -24,7 +24,7 @@ export type RetryAfterOptions = {
 	 * - `>= 1` = ceiling on delay
 	 * - Negative/NaN/undefined = unlimited
 	 *
-	 * Throws `AbortError` if `Retry-After` exceeds this value.
+	 * Throws `ConstraintError` if `Retry-After` exceeds this value.
 	 * @default undefined
 	 */
 	maxDelayTime?: number;
@@ -62,7 +62,7 @@ export type RetryAfterOptions = {
  * - Numeric values: delay-seconds
  * - HTTP-date values: absolute future time, past dates are zero-delay
  * - Full-jitter: jitter on top of `delay` when configured
- * - Throws `AbortError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days)
+ * - Throws `ConstraintError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days)
  * - Returns last response when `maxRetries` exhausted (no throw)
  * - Respects `AbortSignal` from request options or `Request` object for cancellation
  *
@@ -71,7 +71,8 @@ export type RetryAfterOptions = {
  * **Cancellation:** Honors `AbortSignal` during retry waits and request execution. Aborting the signal
  * immediately cancels pending retries and throws `AbortError`.
  *
- * @throws {DOMException} `AbortError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days), or when request is cancelled via `AbortSignal`
+ * @throws {DOMException} `ConstraintError` when delay exceeds `maxDelayTime` or `INT32_MAX` (~24.8 days)
+ * @throws {DOMException} `AbortError` when request is cancelled via `AbortSignal`
  * @example
  * ```ts
  * const qfetch = withRetryAfter({ maxRetries: 3, maxJitter: 60_000 })(fetch);
@@ -130,15 +131,15 @@ export const withRetryAfter: Middleware<RetryAfterOptions | undefined> = (
 			// Enforce ceiling on retry delay
 			if (maxDelayTime !== undefined && delay > maxDelayTime)
 				throw new DOMException(
-					`Exceeded maximum ceiling for Retry-After value: expected up to ${maxDelayTime}, received ${delay}`,
-					"AbortError",
+					`Retry-After delay exceeds maximum ceiling: expected up to ${maxDelayTime}, received ${delay}`,
+					"ConstraintError",
 				);
 
 			// Enforce INT32_MAX constraint for setTimeout
 			if (delay > INT32_MAX)
 				throw new DOMException(
-					`Retry-After delay exceeds maximum safe setTimeout value: expected up to ${INT32_MAX}, received ${delay}`,
-					"AbortError",
+					`Retry-After delay exceeds maximum timeout: expected up to ${INT32_MAX}, received ${delay}`,
+					"ConstraintError",
 				);
 
 			// Calculate a jitter to prevent thundering herd
