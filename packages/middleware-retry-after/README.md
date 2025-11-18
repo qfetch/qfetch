@@ -40,7 +40,7 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
   - `0` means retry only instant requests (delay must be 0ms, otherwise abort)
   - Positive integers set a ceiling on retry delay duration
   - Negative or non-numeric values mean unlimited delay
-  - If the server's `Retry-After` value exceeds this, an `AbortError` is thrown
+  - If the server's `Retry-After` value exceeds this, a `ConstraintError` is thrown
 - `maxJitter?: number` - Maximum random jitter using full-jitter strategy (default: no jitter)
   - `0` means no jitter (deterministic retry timing)
   - Positive integers set the jitter cap
@@ -61,8 +61,8 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
   - Jitter automatically scales with the base delay (shorter delays = less jitter, longer delays = more jitter up to cap)
   - Always respects the minimum delay specified by the server
 - **Error handling**:
-  - Exceeding `maxDelayTime` throws a `DOMException` with name `"AbortError"` (checked before jitter is applied)
-  - Exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) throws a `DOMException` with name `"AbortError"` to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution (checked before jitter is applied)
+  - Exceeding `maxDelayTime` throws a `DOMException` with name `"ConstraintError"` (checked before jitter is applied)
+  - Exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) throws a `DOMException` with name `"ConstraintError"` to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution (checked before jitter is applied)
   - Exceeding `maxRetries` returns the last response without retrying (no error thrown)
 - **Cancellation support**:
   - Respects `AbortSignal` passed via request options or `Request` object
@@ -112,7 +112,7 @@ const qfetch = compose(
   })
 )(fetch);
 
-// Throws AbortError if server requests delay > 60 seconds
+// Throws ConstraintError if server requests delay > 60 seconds
 const response = await qfetch('https://api.example.com/data');
 ```
 
