@@ -41,8 +41,8 @@ pnpm check-types
 # Run tests
 pnpm test
 
-# Run E2E tests only
-pnpm test:e2e
+# Run integration tests only
+pnpm test:integration
 
 # Run unit tests only
 pnpm test:unit
@@ -97,8 +97,14 @@ Tests use Node.js test runner with native TypeScript transpilation.
 **BDD Approach**: Tests follow Behavior-Driven Development principles, focusing on observable behavior rather than implementation details. Test descriptions should express what the system does from a user/consumer perspective, avoiding references to internal implementation details like function names, variable names, or internal state management.
 
 #### Test File Types
-- **Unit tests** (`*.test.ts`): Test individual middleware behavior with mocked fetch
-- **E2E tests** (`*.e2e-test.ts`): Test middleware with real HTTP servers and network calls
+- **Unit tests** (`*.test.ts`):
+  * Test individual middleware behavior in isolation
+  * Use mocked fetch/responses
+  * Focus on logic correctness, edge cases, status code handling
+- **Integration tests** (`*.integration-test.ts`):
+  * Test middleware with real HTTP servers and network calls
+  * Focus on actual retry behavior and interaction between fetch and server
+  * Cover typical workflows rather than every edge case
 
 #### Test Conventions
 1. **Context usage**: Always pass `TestContext` as parameter and use `ctx.assert` for assertions
@@ -112,7 +118,7 @@ Tests use Node.js test runner with native TypeScript transpilation.
 6. **Timer mocking**: Use `ctx.mock.timers.enable()` for time-dependent tests
 7. **Nested tests**: Use `ctx.test()` for sub-test cases within a test
 8. **Async helpers**: Use helper functions like `flushMicrotasks()` for async control
-9. **E2E setup**: Use `ctx.after()` for cleanup and `ctx.signal` for abort handling
+9. **Integration setup**: Use `ctx.after()` for cleanup and `ctx.signal` for abort handling
 10. **Coverage exclusion**: Add `/* node:coverage disable */` after imports for test files
 
 ## Build System

@@ -14,8 +14,8 @@
 		"test": {
 			"dependsOn": ["^test"]
 		},
-		"test:e2e": {
-			"dependsOn": ["^test:e2e"]
+		"test:integration": {
+			"dependsOn": ["^test:integration"]
 		},
 		"test:unit": {
 			"dependsOn": ["^test:unit"]

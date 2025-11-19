@@ -3,7 +3,7 @@ import { describe, it, type TestContext } from "node:test";
 import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 
 /* node:coverage disable */
-describe("framework", () => {
+describe("framework - Unit tests", () => {
 	describe("compose", () => {
 		it("should execute middlewares in right-to-left order", async (ctx: TestContext) => {
 			// arrange

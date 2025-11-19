@@ -10,7 +10,7 @@ interface ServerContext {
 	baseUrl: string;
 }
 
-describe("framework - E2E tests", { concurrency: true }, () => {
+describe("framework - Integration tests", { concurrency: true }, () => {
 	/**
 	 * Creates an isolated HTTP server for a single test.
 	 * Each test gets its own server on a random port to enable concurrent execution.
