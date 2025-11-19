@@ -41,8 +41,8 @@ pnpm check-types
 # Run tests
 pnpm test
 
-# Run E2E tests only
-pnpm test:e2e
+# Run integration tests only
+pnpm test:integration
 
 # Run unit tests only
 pnpm test:unit
