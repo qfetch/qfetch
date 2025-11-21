@@ -1,10 +1,10 @@
-# qfetch
+# qfetch - Quality Fetch
 
-Quality fetch - A TypeScript framework for composable fetch middlewares.
+A TypeScript framework for composable fetch middlewares built on standard web APIs.
 
-## What is qfetch?
+## Overview
 
-qfetch provides a middleware framework for the native `fetch` API, allowing you to compose reusable request/response processing logic. Build fetch clients with retry logic, error handling, logging, base URLs, and custom hooks through composable middleware.
+qfetch lets you compose reusable request/response processing logic around the native `fetch` API. Build fetch clients with retry logic, error handling, logging, base URLs, and more through composable middleware.
 
 ```typescript
 import { compose } from '@qfetch/core';
@@ -16,42 +16,43 @@ const qfetch = compose(
   withBaseUrl('https://api.example.com')
 )(fetch);
 
-// Now use qfetch like regular fetch with retry + base URL
+// Use qfetch like regular fetch with baked in retry + base URL
 const response = await qfetch('/users');
 ```
 
 ## Features
 
-- **Composable Middleware**: Build complex fetch behavior from simple, reusable middleware components
-- **Type-Safe**: Full TypeScript support with type-safe middleware options
-- **Standard-Compliant**: Built on standard Fetch API and MDN-documented web standards
-- **Multiple Composition Styles**: Use `compose()` (right-to-left) or `pipeline()` (left-to-right)
-- **Multi-Format Builds**: CommonJS, ESM, and IIFE outputs with ES2020 target for broad compatibility
+- **Composable**: Build complex behavior from simple, reusable middleware
+- **Type-Safe**: Full TypeScript support with type-safe options
+- **Standard-Compliant**: Built on Fetch API and MDN web standards
+- **Flexible**: Compose right-to-left with `compose()` or left-to-right with `pipeline()`
+- **Universal**: Works in Node.js, browsers, and edge runtimes
+
+## Quick Start
+
+```bash
+# Install core package
+npm install @qfetch/core
+
+# Install middleware packages as needed
+# npm install @qfetch/middleware-<name>
+```
+
+## Packages
+
+- **[@qfetch/core](packages/core)**: Core middleware composition system
 
 ## Development
 
-This is a monorepo managed with pnpm workspaces, Turbo and release-please.
-
-- **pnpm workspaces**: Manages npm dependencies and workspace linking
-- **Turbo**: Orchestrates builds, tests, and manages monorepo task dependencies
-- **release-please**: Automated versioning and publishing to NPM and JSR
-- **tsdown**: TypeScript compilation and bundling to multiple formats
-- **Biome**: Linting, formatting, and import organization
-
-Each package follows a consistent structure and builds to multiple formats (CommonJS, ESM, and IIFE) with ES2020 target for broad compatibility.
-
-### Environment Setup
-
-A Nix flake is provided for the full development environment:
+For contributors and maintainers:
 
 ```bash
+# Setup with Nix (recommended)
 nix develop
-```
 
-### Common Commands
+# Or ensure you have Node.js 22+ and pnpm installed
 
-```bash
-# Generate a new middleware from template
+# Generate new middleware
 pnpm generate
 
 # Watch mode for development (builds, type-checks, and tests on file changes)
@@ -77,55 +78,7 @@ pnpm style
 pnpm repo:style
 ```
 
-### Repository Structure
-
-```
-qfetch/
-├── packages/
-│   ├── core/                      # Core framework with middleware composition
-│   └── middleware-<name>/         # Individual middleware packages
-├── turbo/
-│   └── templates/                 # Code generation templates
-├── .github/workflows/             # CI/CD automation
-└── release-please-config.json     # Release automation configuration
-```
-
-### Creating New Middleware
-
-Generate a new middleware package from the template:
-
-```bash
-pnpm generate
-```
-
-This creates a properly structured middleware package with all necessary configuration for testing, building, and publishing to both NPM and JSR.
-
-**Important**: After generating a middleware, manual steps are required:
-1. An owner of the `@qfetch` organization on JSR must create the package scope before publishing
-2. Update `release-please-config.json` with the new package configuration
-3. Add CD workflow job in `.github/workflows/-packages-cd.yaml`
-4. Create CI workflow file in `.github/workflows/<name>.ci.yaml`
-
-See [CLAUDE.md](CLAUDE.md) for detailed instructions.
-
-## Architecture
-
-The framework is built around composable middleware that follows the Single Responsibility Principle:
-
-- **Core Package** (`@qfetch/core`): Provides `compose()`, `pipeline()`, and the `Middleware<T>` type system
-- **Middleware Packages**: Individual packages that each handle one specific concern (retries, base URLs, logging, etc.)
-- **Type Safety**: Each middleware has type-safe, configurable options
-- **Standard-Compliant**: Uses only standard Fetch API and MDN-documented web standards
-
-## Contributing
-
-Contributions are welcome! This project uses:
-- **Conventional Commits** for automated changelog generation
-- **Squash-merge only** for all pull requests
-- **BDD-style tests** using Node.js native test runner
-- **Automated CI/CD** with per-package workflows
-
-See [CLAUDE.md](CLAUDE.md) for comprehensive development guidelines.
+See [CLAUDE.md](CLAUDE.md) for detailed development guidelines, architecture details, and contribution workflows.
 
 ## License
 
