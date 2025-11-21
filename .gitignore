@@ -14,6 +14,8 @@
 !*.ts
 # template files
 !*.hbs
+# feature files
+!*.feature
 
 # config files
 !.editorconfig
