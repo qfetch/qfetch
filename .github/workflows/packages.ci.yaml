@@ -12,7 +12,6 @@ permissions:
 
 jobs:
   detect-changes:
-    name: Detect changed packages
     timeout-minutes: 5
     runs-on: ubuntu-24.04
     outputs:
@@ -34,7 +33,6 @@ jobs:
               - '.github/workflows/_template.package-ci.yaml'
 
   packages-core:
-    name: Core
     needs: detect-changes
     if: needs.detect-changes.outputs['packages/core'] == 'true'
     uses: ./.github/workflows/_template.package-ci.yaml
