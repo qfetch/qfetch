@@ -219,7 +219,6 @@ pnpm generate  # Creates from turbo templates
    Add release job for the package:
    ```yaml
    packages-<package name>:
-     name: <package name>
      needs: release-please
      if: ${{ needs.release-please.outputs['packages/<package name>--release_created'] == 'true' }}
      uses: ./.github/workflows/_template.package-cd.yaml

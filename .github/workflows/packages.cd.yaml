@@ -36,7 +36,6 @@ jobs:
           echo "${{ toJson(steps.release.outputs) }}"
 
   packages-core:
-    name: Core
     needs: release-please
     if: ${{ needs.release-please.outputs['packages/core--release_created'] == 'true' }}
     uses: ./.github/workflows/_template.package-cd.yaml
