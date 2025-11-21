@@ -157,26 +157,26 @@ The project uses a comprehensive automation setup:
 - Publishes to both NPM and JSR registries automatically
 - Uploads build artifacts to GitHub releases
 
-### Adding New Middleware Packages
+### Adding new packages
 
 **Automated Generation:**
 ```bash
-pnpm generate  # Creates middleware from turbo templates
+pnpm generate  # Creates from turbo templates
 ```
 
 **Manual Configuration Required:**
 1. **JSR Package Scope** (One-time setup by @qfetch org owner):
    - **IMPORTANT**: Before publishing, an owner of the `@qfetch` organization on JSR must create the package scope
-   - Navigate to JSR and create the package: `@qfetch/middleware-<name>`
+   - Navigate to JSR and create the package: `@qfetch/<package-name>`
    - This step is required or the automated publishing will fail
 
 2. **Release Configuration** (`release-please-config.json`):
    ```json
-   "packages/middleware-<name>": {
+   "packages/<package-name>": {
      "extra-files": [
        {
          "type": "json",
-         "path": "packages/middleware-<name>/jsr.json",
+         "path": "packages/<package-name>/jsr.json",
          "jsonpath": "$.version"
        }
      ]
@@ -184,12 +184,50 @@ pnpm generate  # Creates middleware from turbo templates
    ```
 
 3. **CI Workflow** (`.github/workflows/packages.ci.yaml`):
-   - Add package to the `detect-changes` job filters
-   - Add job for the package following the `core` pattern
+   Add package to the `detect-changes` job filters:
+   ```yaml
+   # Add to outputs:
+   outputs:
+     "packages/<package name>": ${{ steps.filter.outputs['packages/<package name>'] }}
+
+   # Add to paths filter:
+   filters: |
+     'packages/<package name>':
+       - 'packages/<package name>/**'
+       - '.github/workflows/_template.package-ci.yaml'
+   ```
+
+   Add CI job for the package:
+   ```yaml
+   # Add new job:
+   packages-<package-name>:
+     needs: detect-changes
+     if: needs.detect-changes.outputs['packages/<package name>'] == 'true'
+     uses: ./.github/workflows/_template.package-ci.yaml
+     with:
+       package-name: <package-name>
+   ```
 
 4. **CD Workflow** (`.github/workflows/packages.cd.yaml`):
-   - Add package output mapping to `release-please` outputs
-   - Add release job following the `core` pattern
+   Add package output mapping to `release-please`:
+   ```yaml
+   outputs:
+     "packages/<package name>--tag_name": ${{ steps.release.outputs['packages/<package name>--tag_name'] }}
+     "packages/<package name>--release_created": ${{ steps.release.outputs['packages/<package name>--release_created'] }}
+   ```
+
+   Add release job for the package:
+   ```yaml
+   packages-<package name>:
+     name: <package name>
+     needs: release-please
+     if: ${{ needs.release-please.outputs['packages/<package name>--release_created'] == 'true' }}
+     uses: ./.github/workflows/_template.package-cd.yaml
+     with:
+       package_path: "packages/<package name>"
+       package_name: "@proventuslabs/<package name>"
+       package_tag: ${{ needs.release-please.outputs['packages/<package name>--tag_name'] }}
+   ```
 
 ### Commit Requirements
 - **Squash-merge only** - all commits must be squashed when merging PRs
