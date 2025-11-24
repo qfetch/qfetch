@@ -115,22 +115,22 @@ Tests use Node.js test runner with native TypeScript transpilation.
    * Use `describe()` to group related behaviors or scenarios (~ Gherkin `Rule` equivalent)
    * Use `test()` to specify one expected behavior (~ Gherkin `Scenario` or `Scenario Outline` equivalent)
    * Use `ctx.test()` for nested/sub-tests to organize sub-scenarios per value (~ Gherkin `Scenario Outline` cases)
-   * Write names and descriptions following guideline:
-     - Keep descriptions behavior-focused, not implementation-focused
-     - Avoid Gherkin scenario keywords (Given/When/Then) in descriptions
-     - Tests should read as statements, not instructions
-     - Use a consistent verb tense, favouring present tense
-     - Be concise but precise, one sentence of < 8–10 words if possible
-4. **Implement your test (AAA)**: Clearly separate sections with capitalized comments:
+4. Write `suite`, `describe`, `test` and `ctx.assert` descriptions and names following:
+   - Keep descriptions behavior-focused, not implementation-focused
+   - Avoid Gherkin scenario keywords (Given/When/Then) in descriptions
+   - Tests should read as statements, not instructions
+   - Use a consistent verb tense, favouring present tense
+   - Be concise but precise, one sentence of < 8–10 words if possible
+5. **Implement your test (AAA)**: Clearly separate sections with capitalized comments:
    * `// Arrange` – set up data, mocks, and preconditions
    * `// Act` – perform the action under test
    * `// Assert` – verify expected outcomes
-5. **Mock dependencies**: Use `ctx.mock` to replace external calls or modules.
-6. **Handle timers**: Enable timer mocks with `ctx.mock.timers.enable({ apis: [...] })` for time-sensitive code.
-7. **Control async flows**: Use helpers like `flushMicrotasks()` for predictable async behavior.
-8. **Handle aborts and timeouts**: Pass `ctx.signal` for predictable test timeouts.
-9. **Setup and Teardown**: Use `ctx.before`, `ctx.beforeEach` for setup and `ctx.after`, `ctx.afterEach` for teardown.
-10. **Exclude from coverage**: Add `/* node:coverage disable */` after imports in test files if needed.
+6. **Mock dependencies**: Use `ctx.mock` to replace external calls or modules.
+7. **Handle timers**: Enable timer mocks with `ctx.mock.timers.enable({ apis: [...] })` for time-sensitive code.
+8. **Control async flows**: Use helpers like `flushMicrotasks()` for predictable async behavior.
+9. **Handle aborts and timeouts**: Pass `ctx.signal` for predictable test timeouts.
+10. **Setup and Teardown**: Use `ctx.before`, `ctx.beforeEach` for setup and `ctx.after`, `ctx.afterEach` for teardown.
+11. **Exclude from coverage**: Add `/* node:coverage disable */` after imports in test files if needed.
 
 ## Build System
 

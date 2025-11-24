@@ -90,13 +90,12 @@ suite("framework - Integration", { concurrency: true }, () => {
 			await response.json();
 
 			// Assert
-			ctx.assert.strictEqual(response.status, 200);
-			ctx.assert.deepStrictEqual(calls, [
-				"mw2-before",
-				"mw1-before",
-				"mw1-after",
-				"mw2-after",
-			]);
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.deepStrictEqual(
+				calls,
+				["mw2-before", "mw1-before", "mw1-after", "mw2-after"],
+				"processes middlewares in reverse order",
+			);
 		});
 
 		test("modifies request headers before sending", async (ctx: TestContext) => {
@@ -119,8 +118,12 @@ suite("framework - Integration", { concurrency: true }, () => {
 			const data = await response.json();
 
 			// Assert
-			ctx.assert.strictEqual(response.status, 200);
-			ctx.assert.strictEqual(data.customHeader, "test-value");
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.strictEqual(
+				data.customHeader,
+				"test-value",
+				"applies custom header to request",
+			);
 		});
 
 		test("works with no middleware", async (ctx: TestContext) => {
@@ -136,8 +139,12 @@ suite("framework - Integration", { concurrency: true }, () => {
 			const data = await response.json();
 
 			// Assert
-			ctx.assert.strictEqual(response.status, 200);
-			ctx.assert.strictEqual(data.message, "Success!");
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.strictEqual(
+				data.message,
+				"Success!",
+				"returns expected response data",
+			);
 		});
 	});
 
@@ -172,13 +179,12 @@ suite("framework - Integration", { concurrency: true }, () => {
 			await response.json();
 
 			// Assert
-			ctx.assert.strictEqual(response.status, 200);
-			ctx.assert.deepStrictEqual(calls, [
-				"mw1-before",
-				"mw2-before",
-				"mw2-after",
-				"mw1-after",
-			]);
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.deepStrictEqual(
+				calls,
+				["mw1-before", "mw2-before", "mw2-after", "mw1-after"],
+				"processes middlewares in declaration order",
+			);
 		});
 
 		test("modifies request headers before sending", async (ctx: TestContext) => {
@@ -201,8 +207,12 @@ suite("framework - Integration", { concurrency: true }, () => {
 			const data = await response.json();
 
 			// Assert
-			ctx.assert.strictEqual(response.status, 200);
-			ctx.assert.strictEqual(data.customHeader, "pipeline-value");
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.strictEqual(
+				data.customHeader,
+				"pipeline-value",
+				"applies custom header to request",
+			);
 		});
 
 		test("works with no middleware", async (ctx: TestContext) => {
@@ -218,8 +228,12 @@ suite("framework - Integration", { concurrency: true }, () => {
 			const data = await response.json();
 
 			// Assert
-			ctx.assert.strictEqual(response.status, 200);
-			ctx.assert.strictEqual(data.message, "Success!");
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.strictEqual(
+				data.message,
+				"Success!",
+				"returns expected response data",
+			);
 		});
 	});
 });

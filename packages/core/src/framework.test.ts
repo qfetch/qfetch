@@ -35,14 +35,16 @@ suite("framework - Unit", () => {
 			const res = await qfetch("https://example.com", { method: "GET" });
 
 			// Assert
-			ctx.assert.strictEqual(await res.text(), "ok");
-			ctx.assert.deepStrictEqual(calls, [
-				"mw2-before",
-				"mw1-before",
-				"base-fetch",
-				"mw1-after",
-				"mw2-after",
-			]);
+			ctx.assert.strictEqual(
+				await res.text(),
+				"ok",
+				"returns expected response body",
+			);
+			ctx.assert.deepStrictEqual(
+				calls,
+				["mw2-before", "mw1-before", "base-fetch", "mw1-after", "mw2-after"],
+				"processes middlewares in reverse order",
+			);
 		});
 
 		test("forwards request parameters through the chain", async (ctx: TestContext) => {
@@ -66,8 +68,16 @@ suite("framework - Unit", () => {
 			await qfetch("https://example.com", { method: "POST" });
 
 			// Assert
-			ctx.assert.strictEqual(receivedInput, "https://example.com");
-			ctx.assert.deepStrictEqual(receivedInit, { method: "POST" });
+			ctx.assert.strictEqual(
+				receivedInput,
+				"https://example.com",
+				"passes URL to base fetch",
+			);
+			ctx.assert.deepStrictEqual(
+				receivedInit,
+				{ method: "POST" },
+				"passes init options to base fetch",
+			);
 		});
 
 		test("works with no middlewares", async (ctx: TestContext) => {
@@ -80,7 +90,11 @@ suite("framework - Unit", () => {
 			const res = await qfetch("url");
 
 			// Assert
-			ctx.assert.strictEqual(await res.text(), "ok");
+			ctx.assert.strictEqual(
+				await res.text(),
+				"ok",
+				"returns base fetch response unchanged",
+			);
 		});
 	});
 
@@ -115,14 +129,16 @@ suite("framework - Unit", () => {
 			const res = await qfetch("https://example.com", { method: "GET" });
 
 			// Assert
-			ctx.assert.strictEqual(await res.text(), "ok");
-			ctx.assert.deepStrictEqual(calls, [
-				"mw1-before",
-				"mw2-before",
-				"base-fetch",
-				"mw2-after",
-				"mw1-after",
-			]);
+			ctx.assert.strictEqual(
+				await res.text(),
+				"ok",
+				"returns expected response body",
+			);
+			ctx.assert.deepStrictEqual(
+				calls,
+				["mw1-before", "mw2-before", "base-fetch", "mw2-after", "mw1-after"],
+				"processes middlewares in declaration order",
+			);
 		});
 
 		test("forwards request parameters through the chain", async (ctx: TestContext) => {
@@ -146,8 +162,16 @@ suite("framework - Unit", () => {
 			await qfetch("https://example.com", { method: "POST" });
 
 			// Assert
-			ctx.assert.strictEqual(receivedInput, "https://example.com");
-			ctx.assert.deepStrictEqual(receivedInit, { method: "POST" });
+			ctx.assert.strictEqual(
+				receivedInput,
+				"https://example.com",
+				"passes URL to base fetch",
+			);
+			ctx.assert.deepStrictEqual(
+				receivedInit,
+				{ method: "POST" },
+				"passes init options to base fetch",
+			);
 		});
 
 		test("works with no middlewares", async (ctx: TestContext) => {
@@ -160,7 +184,11 @@ suite("framework - Unit", () => {
 			const res = await qfetch("url");
 
 			// Assert
-			ctx.assert.strictEqual(await res.text(), "ok");
+			ctx.assert.strictEqual(
+				await res.text(),
+				"ok",
+				"returns base fetch response unchanged",
+			);
 		});
 	});
 });
