@@ -165,10 +165,13 @@ pnpm generate  # Creates from turbo templates
 ```
 
 **Manual Configuration Required:**
-1. **JSR Package Scope** (One-time setup by @qfetch org owner):
-   - **IMPORTANT**: Before publishing, an owner of the `@qfetch` organization on JSR must create the package scope
-   - Navigate to JSR and create the package: `@qfetch/<package-name>`
-   - This step is required or the automated publishing will fail
+1. **Package publishing** (_IMPORTANT_ one-time setup by @qfetch org owner):
+   a) An owner of the `@qfetch` organization on JSR must:
+    - Create the package `@qfetch/<package-name>` in the scope
+    - Link the GitHub Repository for OIDC publishing in the package settings
+   b) An owner of the `@qfetch` organization on NPM must:
+    - Create the package scope by publishing the empty package under `0.0.0-reserved.0` tag
+    - Link the GitHub Repository (Trusted Publisher) for OIDC publishing in the package settings
 
 2. **Release Configuration** (`release-please-config.json`):
    ```json
@@ -224,7 +227,7 @@ pnpm generate  # Creates from turbo templates
      uses: ./.github/workflows/_template.package-cd.yaml
      with:
        package_path: "packages/<package name>"
-       package_name: "@proventuslabs/<package name>"
+       package_name: "@qfetch/<package name>"
        package_tag: ${{ needs.release-please.outputs['packages/<package name>--tag_name'] }}
    ```
 
