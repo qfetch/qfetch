@@ -99,7 +99,7 @@ jobs:
         run: pnpm build --filter=${{ inputs.package_name }}
 
       - name: Publish to npm registry
-        run: pnpm publish --filter=${{ inputs.package_name }} --access public
+        run: pnpm publish --filter=${{ inputs.package_name }} --provenance --access public
 
   publish-jsr:
     timeout-minutes: 2
