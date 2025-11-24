@@ -1,5 +1,5 @@
 import { createServer, type Server } from "node:http";
-import { describe, it, type TestContext } from "node:test";
+import { describe, suite, type TestContext, test } from "node:test";
 
 import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 
@@ -10,7 +10,7 @@ interface ServerContext {
 	baseUrl: string;
 }
 
-describe("framework - Integration tests", { concurrency: true }, () => {
+suite("framework - Integration", { concurrency: true }, () => {
 	/**
 	 * Creates an isolated HTTP server for a single test.
 	 * Each test gets its own server on a random port to enable concurrent execution.
@@ -59,9 +59,9 @@ describe("framework - Integration tests", { concurrency: true }, () => {
 		return { server, baseUrl };
 	};
 
-	describe("compose with real HTTP requests", () => {
-		it("should apply middleware in right-to-left order with real fetch", async (ctx: TestContext) => {
-			// arrange
+	describe("compose", () => {
+		test("applies middleware in right-to-left order with real fetch", async (ctx: TestContext) => {
+			// Arrange
 			ctx.plan(2);
 			const { baseUrl } = await createTestServer(ctx);
 
@@ -83,27 +83,24 @@ describe("framework - Integration tests", { concurrency: true }, () => {
 
 			const qfetch = compose(mw1, mw2)(fetch);
 
-			// act
+			// Act
 			const response = await qfetch(`${baseUrl}/success`, {
 				signal: ctx.signal,
 			});
 			await response.json();
 
-			// assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"Response status should be 200",
-			);
-			ctx.assert.deepStrictEqual(
-				calls,
-				["mw2-before", "mw1-before", "mw1-after", "mw2-after"],
-				"Middleware should execute in right-to-left order",
-			);
+			// Assert
+			ctx.assert.strictEqual(response.status, 200);
+			ctx.assert.deepStrictEqual(calls, [
+				"mw2-before",
+				"mw1-before",
+				"mw1-after",
+				"mw2-after",
+			]);
 		});
 
-		it("should allow middleware to modify request headers", async (ctx: TestContext) => {
-			// arrange
+		test("modifies request headers before sending", async (ctx: TestContext) => {
+			// Arrange
 			ctx.plan(2);
 			const { baseUrl } = await createTestServer(ctx);
 
@@ -115,54 +112,38 @@ describe("framework - Integration tests", { concurrency: true }, () => {
 
 			const qfetch = compose(addHeader)(fetch);
 
-			// act
+			// Act
 			const response = await qfetch(`${baseUrl}/echo-headers`, {
 				signal: ctx.signal,
 			});
 			const data = await response.json();
 
-			// assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"Response status should be 200",
-			);
-			ctx.assert.strictEqual(
-				data.customHeader,
-				"test-value",
-				"Custom header should be sent to server",
-			);
+			// Assert
+			ctx.assert.strictEqual(response.status, 200);
+			ctx.assert.strictEqual(data.customHeader, "test-value");
 		});
 
-		it("should work with no middleware", async (ctx: TestContext) => {
-			// arrange
+		test("works with no middleware", async (ctx: TestContext) => {
+			// Arrange
 			ctx.plan(2);
 			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = compose()(fetch);
 
-			// act
+			// Act
 			const response = await qfetch(`${baseUrl}/success`, {
 				signal: ctx.signal,
 			});
 			const data = await response.json();
 
-			// assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"Response status should be 200",
-			);
-			ctx.assert.strictEqual(
-				data.message,
-				"Success!",
-				"Response should be from server",
-			);
+			// Assert
+			ctx.assert.strictEqual(response.status, 200);
+			ctx.assert.strictEqual(data.message, "Success!");
 		});
 	});
 
-	describe("pipeline with real HTTP requests", () => {
-		it("should apply middleware in left-to-right order with real fetch", async (ctx: TestContext) => {
-			// arrange
+	describe("pipeline", () => {
+		test("applies middleware in left-to-right order with real fetch", async (ctx: TestContext) => {
+			// Arrange
 			ctx.plan(2);
 			const { baseUrl } = await createTestServer(ctx);
 
@@ -184,27 +165,24 @@ describe("framework - Integration tests", { concurrency: true }, () => {
 
 			const qfetch = pipeline(mw1, mw2)(fetch);
 
-			// act
+			// Act
 			const response = await qfetch(`${baseUrl}/success`, {
 				signal: ctx.signal,
 			});
 			await response.json();
 
-			// assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"Response status should be 200",
-			);
-			ctx.assert.deepStrictEqual(
-				calls,
-				["mw1-before", "mw2-before", "mw2-after", "mw1-after"],
-				"Middleware should execute in left-to-right order",
-			);
+			// Assert
+			ctx.assert.strictEqual(response.status, 200);
+			ctx.assert.deepStrictEqual(calls, [
+				"mw1-before",
+				"mw2-before",
+				"mw2-after",
+				"mw1-after",
+			]);
 		});
 
-		it("should allow middleware to modify request headers", async (ctx: TestContext) => {
-			// arrange
+		test("modifies request headers before sending", async (ctx: TestContext) => {
+			// Arrange
 			ctx.plan(2);
 			const { baseUrl } = await createTestServer(ctx);
 
@@ -216,48 +194,32 @@ describe("framework - Integration tests", { concurrency: true }, () => {
 
 			const qfetch = pipeline(addHeader)(fetch);
 
-			// act
+			// Act
 			const response = await qfetch(`${baseUrl}/echo-headers`, {
 				signal: ctx.signal,
 			});
 			const data = await response.json();
 
-			// assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"Response status should be 200",
-			);
-			ctx.assert.strictEqual(
-				data.customHeader,
-				"pipeline-value",
-				"Custom header should be sent to server",
-			);
+			// Assert
+			ctx.assert.strictEqual(response.status, 200);
+			ctx.assert.strictEqual(data.customHeader, "pipeline-value");
 		});
 
-		it("should work with no middleware", async (ctx: TestContext) => {
-			// arrange
+		test("works with no middleware", async (ctx: TestContext) => {
+			// Arrange
 			ctx.plan(2);
 			const { baseUrl } = await createTestServer(ctx);
 			const qfetch = pipeline()(fetch);
 
-			// act
+			// Act
 			const response = await qfetch(`${baseUrl}/success`, {
 				signal: ctx.signal,
 			});
 			const data = await response.json();
 
-			// assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"Response status should be 200",
-			);
-			ctx.assert.strictEqual(
-				data.message,
-				"Success!",
-				"Response should be from server",
-			);
+			// Assert
+			ctx.assert.strictEqual(response.status, 200);
+			ctx.assert.strictEqual(data.message, "Success!");
 		});
 	});
 });
