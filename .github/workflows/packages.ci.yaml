@@ -32,7 +32,7 @@ jobs:
               - 'packages/core/**'
               - '.github/workflows/_template.package-ci.yaml'
 
-  packages-core:
+  core:
     needs: detect-changes
     if: needs.detect-changes.outputs['packages/core'] == 'true'
     uses: ./.github/workflows/_template.package-ci.yaml

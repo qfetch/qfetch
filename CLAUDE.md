@@ -203,12 +203,13 @@ pnpm generate  # Creates from turbo templates
    Add CI job for the package:
    ```yaml
    # Add new job:
-   packages-<package-name>:
+   <package-name>:
      needs: detect-changes
      if: needs.detect-changes.outputs['packages/<package name>'] == 'true'
      uses: ./.github/workflows/_template.package-ci.yaml
      with:
-       package-name: <package-name>
+       package_path: "packages/<package name>"
+       package_name: "@qfetch/<package name>"
    ```
 
 4. **CD Workflow** (`.github/workflows/packages.cd.yaml`):
@@ -221,7 +222,7 @@ pnpm generate  # Creates from turbo templates
 
    Add release job for the package:
    ```yaml
-   packages-<package name>:
+   <package name>:
      needs: release-please
      if: ${{ needs.release-please.outputs['packages/<package name>--release_created'] == 'true' }}
      uses: ./.github/workflows/_template.package-cd.yaml
