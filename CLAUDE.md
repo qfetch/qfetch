@@ -97,29 +97,40 @@ Tests use Node.js test runner with native TypeScript transpilation.
 **BDD Approach**: Tests follow Behavior-Driven Development principles, focusing on observable behavior rather than implementation details. Test descriptions should express what the system does from a user/consumer perspective, avoiding references to internal implementation details like function names, variable names, or internal state management.
 
 #### Test File Types
-- **Unit tests** (`*.test.ts`):
-  * Test individual middleware behavior in isolation
-  * Use mocked fetch/responses
-  * Focus on logic correctness, edge cases, status code handling
-- **Integration tests** (`*.integration-test.ts`):
-  * Test middleware with real HTTP servers and network calls
-  * Focus on actual retry behavior and interaction between fetch and server
-  * Cover typical workflows rather than every edge case
+- **Unit tests** (`*.test.ts`, suite name includes `Unit`):
+  * Validate isolated logic with mocks/stubs
+  * Emphasize correctness, edge cases, and status-code handling
+- **Integration tests** (`*.integration-test.ts`, suite name includes `Integration`):
+  * Verify interaction between components (e.g., real fetch + test server)
+  * Focus on realistic retry behavior and common workflows
+- **End-to-End tests** (`*.e2e-test.ts`, suite name includes `E2E`):
+  * Exercise the full system through real user-level flows
+  * Validate end-to-end behavior, data flow, and environment configuration
 
 #### Test Conventions
-1. **Context usage**: Always pass `TestContext` as parameter and use `ctx.assert` for assertions
-2. **Test planning**: Use `ctx.plan(N)` to declare expected assertion count
-3. **AAA pattern**: Clearly separate Arrange, Act, Assert sections with comments
-4. **Descriptive names**:
-   - `describe()` blocks describe observable behaviors and scenarios
-   - `it()` descriptions start with "should" and describe expected behavior
-   - Avoid implementation details in test names and descriptions
-5. **Mocking with context**: Use `ctx.mock.fn()` for function mocks
-6. **Timer mocking**: Use `ctx.mock.timers.enable()` for time-dependent tests
-7. **Nested tests**: Use `ctx.test()` for sub-test cases within a test
-8. **Async helpers**: Use helper functions like `flushMicrotasks()` for async control
-9. **Integration setup**: Use `ctx.after()` for cleanup and `ctx.signal` for abort handling
-10. **Coverage exclusion**: Add `/* node:coverage disable */` after imports for test files
+1. **Plan your assertions**: Use `ctx.plan(N)` to declare how many assertions or sub-tests the test must make.
+2. **Set up test context**: Always pass `TestContext` (`ctx`) as a parameter. Scope everything using the context (e.g. `ctx.assert` or `ctx.mock`).
+3. **Test structure (BDD)**:
+   * Use `suite()` to name the feature/method/file under test (~ Gherkin `Feature` equivalent)
+   * Use `describe()` to group related behaviors or scenarios (~ Gherkin `Rule` equivalent)
+   * Use `test()` to specify one expected behavior (~ Gherkin `Scenario` or `Scenario Outline` equivalent)
+   * Use `ctx.test()` for nested/sub-tests to organize sub-scenarios per value (~ Gherkin `Scenario Outline` cases)
+4. Write `suite`, `describe`, `test` and `ctx.assert` descriptions and names following:
+   - Keep descriptions behavior-focused, not implementation-focused
+   - Avoid Gherkin scenario keywords (Given/When/Then) in descriptions
+   - Tests should read as statements, not instructions
+   - Use a consistent verb tense, favouring present tense
+   - Be concise but precise, one sentence of < 8–10 words if possible
+5. **Implement your test (AAA)**: Clearly separate sections with capitalized comments:
+   * `// Arrange` – set up data, mocks, and preconditions
+   * `// Act` – perform the action under test
+   * `// Assert` – verify expected outcomes
+6. **Mock dependencies**: Use `ctx.mock` to replace external calls or modules.
+7. **Handle timers**: Enable timer mocks with `ctx.mock.timers.enable({ apis: [...] })` for time-sensitive code.
+8. **Control async flows**: Use helpers like `flushMicrotasks()` for predictable async behavior.
+9. **Handle aborts and timeouts**: Pass `ctx.signal` for predictable test timeouts.
+10. **Setup and Teardown**: Use `ctx.before`, `ctx.beforeEach` for setup and `ctx.after`, `ctx.afterEach` for teardown.
+11. **Exclude from coverage**: Add `/* node:coverage disable */` after imports in test files if needed.
 
 ## Build System
 
