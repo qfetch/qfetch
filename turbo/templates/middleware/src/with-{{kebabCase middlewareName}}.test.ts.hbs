@@ -1,100 +1,100 @@
-import { describe, it, type TestContext } from "node:test";
+import { describe, suite, test, type TestContext } from "node:test";
 
 import { type {{pascalCase middlewareName}}Options, with{{pascalCase middlewareName}} } from "./with-{{kebabCase middlewareName}}.ts";
 
 /* node:coverage disable */
-describe("with{{pascalCase middlewareName}} middleware - Unit tests", () => {
+suite("with{{pascalCase middlewareName}} - Unit", () => {
 	// Helper function example: use for common test utilities
 	// Example: const flushMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
 
 	describe("Behavior description from user perspective", () => {
-		it("should [expected observable behavior]", async (ctx: TestContext) => {
-			// arrange
+		test("expected observable behavior", async (ctx: TestContext) => {
+			// Arrange
 			ctx.plan(1);
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 			const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
 
-			// act
+			// Act
 			const response = await qfetch("https://example.com");
 			const body = await response.text();
 
-			// assert
+			// Assert
 			ctx.assert.strictEqual(
 				body,
 				"ok",
-				"Assertion message describing expected outcome",
+				"assertion message describing expected outcome",
 			);
 		});
 
 		// For testing multiple variations of the same behavior
-		it("should [behavior] with different inputs", async (ctx: TestContext) => {
-			// arrange
+		test("behavior with different inputs", async (ctx: TestContext) => {
+			// Arrange
 			ctx.plan(2); // Number of sub-tests
 
 			await ctx.test("specific value case 1", async (ctx: TestContext) => {
-				// arrange
+				// Arrange
 				ctx.plan(1);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 				const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
 
-				// act
+				// Act
 				const response = await qfetch("https://example.com");
 				const body = await response.text();
 
-				// assert
-				ctx.assert.strictEqual(body, "ok", "Assertion message");
+				// Assert
+				ctx.assert.strictEqual(body, "ok", "assertion message");
 			});
 
 			await ctx.test("specific value case 2", async (ctx: TestContext) => {
-				// arrange
+				// Arrange
 				ctx.plan(1);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 				const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
 
-				// act
+				// Act
 				const response = await qfetch("https://example.com");
 				const body = await response.text();
 
-				// assert
-				ctx.assert.strictEqual(body, "ok", "Assertion message");
+				// Assert
+				ctx.assert.strictEqual(body, "ok", "assertion message");
 			});
 		});
 	});
 
 	// Example: Testing time-based behavior with mock timers
 	// describe("Time-based behavior", () => {
-	// 	it("should [time-based behavior]", async (ctx: TestContext) => {
-	// 		// arrange
+	// 	test("time-based behavior description", async (ctx: TestContext) => {
+	// 		// Arrange
 	// 		ctx.plan(2);
 	// 		ctx.mock.timers.enable({ apis: ["setTimeout"] });
 	// 		const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 	// 		const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
 	//
-	// 		// act
+	// 		// Act
 	// 		const presponse = qfetch("https://example.com");
 	// 		await flushMicrotasks();
 	// 		ctx.mock.timers.tick(1000); // Advance time by 1 second
 	//
-	// 		// assert
+	// 		// Assert
 	// 		ctx.assert.strictEqual(
 	// 			fetchMock.mock.callCount(),
 	// 			1,
-	// 			"Should have called fetch once after delay",
+	// 			"calls fetch once after delay",
 	// 		);
 	//
-	// 		// act
+	// 		// Act
 	// 		const response = await presponse;
 	// 		const body = await response.text();
 	//
-	// 		// assert
-	// 		ctx.assert.strictEqual(body, "ok", "Response should be successful");
+	// 		// Assert
+	// 		ctx.assert.strictEqual(body, "ok", "returns successful response");
 	// 	});
 	// });
 
 	// Example: Testing with setup/teardown hooks
 	// describe("Tests with shared setup", () => {
-	// 	it("should [behavior with hooks]", async (ctx: TestContext) => {
-	// 		// arrange
+	// 	test("behavior with hooks", async (ctx: TestContext) => {
+	// 		// Arrange
 	// 		ctx.plan(1);
 	//
 	// 		ctx.beforeEach((ctx: TestContext) => {
@@ -110,21 +110,21 @@ describe("with{{pascalCase middlewareName}} middleware - Unit tests", () => {
 
 	// Example: Testing edge cases
 	// describe("Edge cases and error handling", () => {
-	// 	it("should handle null/undefined values gracefully", async (ctx: TestContext) => {
+	// 	test("handles null/undefined values gracefully", async (ctx: TestContext) => {
 	// 		// Test null body, invalid headers, etc.
 	// 	});
 	//
-	// 	it("should throw expected errors for invalid inputs", async (ctx: TestContext) => {
-	// 		// arrange
+	// 	test("throws expected errors for invalid inputs", async (ctx: TestContext) => {
+	// 		// Arrange
 	// 		ctx.plan(1);
 	// 		const fetchMock = ctx.mock.fn(fetch, async () => new Response("error", { status: 500 }));
 	// 		const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
 	//
-	// 		// assert
+	// 		// Assert
 	// 		await ctx.assert.rejects(
 	// 			() => qfetch("https://example.com"),
 	// 			(e: unknown) => e instanceof Error && e.message.includes("expected"),
-	// 			"Should throw expected error",
+	// 			"throws expected error",
 	// 		);
 	// 	});
 	// });

@@ -6,52 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 qfetch is a TypeScript framework for building composable fetch middlewares using the standard Fetch API and well-known standards from MDN. The project follows composable architecture principles with Single Responsibility Principle (SRP) design, where each middleware has configurable behavior and can be combined with others. It's a monorepo managed with pnpm workspaces, Turbo, and release-please.
 
-## Development Environment
-
-### Runtime
-
-NodeJS 22+
-TypeScript 5.9+
-
-### Using Nix (Recommended)
-A local development shell with all required dependencies is available using Nix:
-
-```bash
-# Enter development shell with Node.js 22+ and all dependencies
-nix develop
-```
-
-This provides an isolated environment with all necessary tools.
-
-### Common Development Commands
-
-```bash
-# Generate a new middleware from template
-pnpm generate
-
-# Watch mode for development
-pnpm dev
-
-# Build all packages
-pnpm build
-
-# Type checking
-pnpm check-types
-
-# Run tests
-pnpm test
-
-# Run integration tests only
-pnpm test:integration
-
-# Run unit tests only
-pnpm test:unit
-
-# Lint and format code
-pnpm style
-pnpm repo:style
-```
-
 ## Architecture
 
 ### Core Framework (`packages/core/`)
@@ -83,13 +37,6 @@ Each middleware should:
 - Provide configurable behavior through type-safe options
 
 ## Code Standards
-
-### Import Organization (Biome)
-Imports are automatically organized into groups:
-1. Built-ins (URL, Node, Bun)
-2. External packages
-3. Aliases
-4. Relative paths
 
 ### Test Configuration
 Tests use Node.js test runner with native TypeScript transpilation.
