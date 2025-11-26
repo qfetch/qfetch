@@ -12,13 +12,10 @@ permissions:
 
 jobs:
   detect-changes:
-    name: Detect changed packages
     timeout-minutes: 5
     runs-on: ubuntu-24.04
     outputs:
-      core: ${{ steps.filter.outputs.core }}
-      utils: ${{ steps.filter.outputs.utils }}
-      sdk: ${{ steps.filter.outputs.sdk }}
+      "packages/core": ${{ steps.filter.outputs['packages/core'] }}
 
     steps:
       - name: Checkout code
@@ -31,15 +28,13 @@ jobs:
         id: filter
         with:
           filters: |
-            core:
+            'packages/core':
               - 'packages/core/**'
-              - '.github/workflows/core.ci.yaml'
               - '.github/workflows/_template.package-ci.yaml'
 
   core:
-    name: Core
     needs: detect-changes
-    if: needs.detect-changes.outputs.core == 'true'
+    if: needs.detect-changes.outputs['packages/core'] == 'true'
     uses: ./.github/workflows/_template.package-ci.yaml
     with:
       package_path: "packages/core"

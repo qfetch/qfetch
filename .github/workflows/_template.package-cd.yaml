@@ -15,11 +15,6 @@ on:
         description: "The release tag for the package"
         required: true
         type: string
-    secrets:
-      NPM_TOKEN:
-        required: true
-      # JSR_TOKEN:
-      #   required: true
 
 jobs:
   build-and-upload:
@@ -68,6 +63,9 @@ jobs:
     timeout-minutes: 2
     runs-on: ubuntu-24.04
     needs: build-and-upload
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -101,9 +99,7 @@ jobs:
         run: pnpm build --filter=${{ inputs.package_name }}
 
       - name: Publish to npm registry
-        run: pnpm publish --filter=${{ inputs.package_name }} --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --filter=${{ inputs.package_name }} --provenance --access public
 
   publish-jsr:
     timeout-minutes: 2

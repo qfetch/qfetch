@@ -36,7 +36,6 @@ jobs:
           echo "${{ toJson(steps.release.outputs) }}"
 
   core:
-    name: Core
     needs: release-please
     if: ${{ needs.release-please.outputs['packages/core--release_created'] == 'true' }}
     uses: ./.github/workflows/_template.package-cd.yaml
@@ -44,5 +43,3 @@ jobs:
       package_path: "packages/core"
       package_name: "@qfetch/core"
       package_tag: ${{ needs.release-please.outputs['packages/core--tag_name'] }}
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
