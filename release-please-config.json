@@ -16,6 +16,15 @@
 					"jsonpath": "$.version"
 				}
 			]
+		},
+		"packages/middleware-base-url": {
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "packages/middleware-base-url/jsr.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }
