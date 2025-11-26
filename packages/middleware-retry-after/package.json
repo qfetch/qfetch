@@ -51,8 +51,9 @@
 		"check-types": "tsc --noEmit",
 		"style": "biome check .",
 		"test": "node --test",
-		"test:e2e": "node --test --test-name-pattern=\"/E2E/i\"",
-		"test:unit": "node --test --test-skip-pattern=\"/E2E/i\""
+		"test:e2e": "node --test \"src/**/*.e2e-test.ts\"",
+		"test:integration": "node --test \"src/**/*.integration-test.ts\"",
+		"test:unit": "node --test \"src/**/*.test.ts\""
 	},
 	"type": "module",
 	"types": "./dist/index.d.ts"
