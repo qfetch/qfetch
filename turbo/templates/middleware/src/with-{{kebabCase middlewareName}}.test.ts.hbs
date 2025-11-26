@@ -7,7 +7,7 @@ suite("with{{pascalCase middlewareName}} - Unit", () => {
 	// Helper function example: use for common test utilities
 	// Example: const flushMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
 
-	describe("Behavior description from user perspective", () => {
+	describe("behavior description from user perspective", () => {
 		test("expected observable behavior", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
@@ -62,7 +62,7 @@ suite("with{{pascalCase middlewareName}} - Unit", () => {
 	});
 
 	// Example: Testing time-based behavior with mock timers
-	// describe("Time-based behavior", () => {
+	// describe("time-based behavior", () => {
 	// 	test("time-based behavior description", async (ctx: TestContext) => {
 	// 		// Arrange
 	// 		ctx.plan(2);
@@ -88,44 +88,6 @@ suite("with{{pascalCase middlewareName}} - Unit", () => {
 	//
 	// 		// Assert
 	// 		ctx.assert.strictEqual(body, "ok", "returns successful response");
-	// 	});
-	// });
-
-	// Example: Testing with setup/teardown hooks
-	// describe("Tests with shared setup", () => {
-	// 	test("behavior with hooks", async (ctx: TestContext) => {
-	// 		// Arrange
-	// 		ctx.plan(1);
-	//
-	// 		ctx.beforeEach((ctx: TestContext) => {
-	// 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
-	// 		});
-	// 		ctx.afterEach((ctx: TestContext) => {
-	// 			ctx.mock.timers.reset();
-	// 		});
-	//
-	// 		// Test implementation...
-	// 	});
-	// });
-
-	// Example: Testing edge cases
-	// describe("Edge cases and error handling", () => {
-	// 	test("handles null/undefined values gracefully", async (ctx: TestContext) => {
-	// 		// Test null body, invalid headers, etc.
-	// 	});
-	//
-	// 	test("throws expected errors for invalid inputs", async (ctx: TestContext) => {
-	// 		// Arrange
-	// 		ctx.plan(1);
-	// 		const fetchMock = ctx.mock.fn(fetch, async () => new Response("error", { status: 500 }));
-	// 		const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
-	//
-	// 		// Assert
-	// 		await ctx.assert.rejects(
-	// 			() => qfetch("https://example.com"),
-	// 			(e: unknown) => e instanceof Error && e.message.includes("expected"),
-	// 			"throws expected error",
-	// 		);
 	// 	});
 	// });
 });
