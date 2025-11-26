@@ -45,7 +45,6 @@ jobs:
       package_name: "@qfetch/core"
 
   middleware-retry-after:
-    name: Middleware Retry After
     needs: detect-changes
     if: needs.detect-changes.outputs['packages/middleware-retry-after'] == 'true'
     uses: ./.github/workflows/_template.package-ci.yaml

@@ -47,9 +47,9 @@ jobs:
       package_tag: ${{ needs.release-please.outputs['packages/core--tag_name'] }}
 
   middleware-retry-after:
+    needs: release-please
     if: ${{ needs.release-please.outputs['packages/middleware-retry-after--release_created'] == 'true' }}
     uses: ./.github/workflows/_template.package-cd.yaml
-    needs: release-please
     with:
       package_path: "packages/middleware-retry-after"
       package_name: "@qfetch/middleware-retry-after"
