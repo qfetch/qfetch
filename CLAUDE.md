@@ -110,17 +110,17 @@ Tests use Node.js test runner with native TypeScript transpilation.
 #### Test Conventions
 1. **Plan your assertions**: Use `ctx.plan(N)` to declare how many assertions or sub-tests the test must make.
 2. **Set up test context**: Always pass `TestContext` (`ctx`) as a parameter. Scope everything using the context (e.g. `ctx.assert` or `ctx.mock`).
-3. **Test structure (BDD)**:
+3. **Test structure (BDD)**: Structure tests following this hierarchy:
    * Use `suite()` to name the feature/method/file under test (~ Gherkin `Feature` equivalent)
    * Use `describe()` to group related behaviors or scenarios (~ Gherkin `Rule` equivalent)
    * Use `test()` to specify one expected behavior (~ Gherkin `Scenario` or `Scenario Outline` equivalent)
    * Use `ctx.test()` for nested/sub-tests to organize sub-scenarios per value (~ Gherkin `Scenario Outline` cases)
-4. Write `suite`, `describe`, `test` and `ctx.assert` descriptions and names following:
-   - Keep descriptions behavior-focused, not implementation-focused
-   - Avoid Gherkin scenario keywords (Given/When/Then) in descriptions
-   - Tests should read as statements, not instructions
-   - Use a consistent verb tense, favouring present tense
-   - Be concise but precise, one sentence of < 8–10 words if possible
+4. **Names and descriptions**: Write `suite`, `describe`, `test` and `ctx.assert` descriptions and names:
+   * Keep descriptions behavior-focused, not implementation-focused
+   * Avoid Gherkin scenario keywords (Given/When/Then) in descriptions
+   * Tests should read as statements, not instructions
+   * Use a consistent verb tense and capitalisation, favouring present tense and lowercase
+   * Be concise but precise, one sentence of 8–10 words if possible
 5. **Implement your test (AAA)**: Clearly separate sections with capitalized comments:
    * `// Arrange` – set up data, mocks, and preconditions
    * `// Act` – perform the action under test
