@@ -8,17 +8,10 @@
 		"check-types": {
 			"dependsOn": ["^build", "^check-types"]
 		},
-		"style": {
-			"dependsOn": ["^style"]
-		},
-		"test": {
-			"dependsOn": ["^test"]
-		},
-		"test:integration": {
-			"dependsOn": ["^test:integration"]
-		},
-		"test:unit": {
-			"dependsOn": ["^test:unit"]
-		}
+		"style": {},
+		"test": {},
+		"test:e2e": {},
+		"test:integration": {},
+		"test:unit": {}
 	}
 }
