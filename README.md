@@ -42,44 +42,6 @@ npm install @qfetch/core
 
 - **[@qfetch/core](packages/core)**: Core middleware composition system
 
-## Development
-
-For contributors and maintainers:
-
-```bash
-# Setup with Nix (recommended)
-nix develop
-
-# Or ensure you have Node.js 22+ and pnpm installed
-
-# Generate new middleware
-pnpm generate
-
-# Watch mode for development (builds, type-checks, and tests on file changes)
-pnpm dev
-
-# Build all packages
-pnpm build
-
-# Run type checking
-pnpm check-types
-
-# Run all tests
-pnpm test
-
-# Run integration tests only
-pnpm test:integration
-
-# Run unit tests only
-pnpm test:unit
-
-# Lint and format code
-pnpm style
-pnpm repo:style
-```
-
-See [CLAUDE.md](CLAUDE.md) for detailed development guidelines, architecture details, and contribution workflows.
-
 ## License
 
 MIT
