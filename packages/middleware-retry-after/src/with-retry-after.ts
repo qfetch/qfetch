@@ -1,3 +1,4 @@
+// biome-ignore lint/correctness/noUndeclaredDependencies: it's a type only
 import type { Middleware } from "@qfetch/core";
 
 /**
