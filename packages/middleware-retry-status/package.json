@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-retry-status",
-	"description": "Fetch middleware",
+	"description": "Fetch middleware for automatic retry on transient HTTP errors (408, 429, 500, 502, 503, 504) with configurable backoff strategies",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
@@ -25,7 +25,12 @@
 		"composable",
 		"fetch",
 		"http",
-		"middleware"
+		"middleware",
+		"retry",
+		"backoff",
+		"resilience",
+		"error-handling",
+		"transient-errors"
 	],
 	"license": "MIT",
 	"main": "./dist/index.cjs",
