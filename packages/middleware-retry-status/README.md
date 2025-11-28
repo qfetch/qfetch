@@ -2,7 +2,7 @@
 
 ## Overview
 
-Middleware that automatically retries failed HTTP requests based on response status codes that indicate transient errors. Implements retry logic for standard retryable HTTP status codes (408, 429, 500, 502, 503, 504) as defined in [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes), using configurable backoff strategies from [`@proventuslabs/retry-strategies`](https://github.com/proventuslabs/retry-strategies).
+Middleware that automatically retries failed HTTP requests based on response status codes that indicate transient errors. Implements retry logic for standard retryable HTTP status codes (408, 429, 500, 502, 503, 504) as defined in [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes), using configurable backoff strategies from [`@proventuslabs/retry-strategies`](https://github.com/proventuslabs/js/tree/main/packages/retry-strategies).
 
 Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
@@ -12,7 +12,7 @@ Intended for use with the composable middleware system provided by [`@qfetch/cor
 npm install @qfetch/middleware-retry-status
 ```
 
-This middleware requires [`@proventuslabs/retry-strategies`](https://github.com/proventuslabs/retry-strategies) as a peer dependency:
+This middleware requires [`@proventuslabs/retry-strategies`](https://github.com/proventuslabs/js/tree/main/packages/retry-strategies) as a peer dependency:
 
 ```bash
 npm install @proventuslabs/retry-strategies
