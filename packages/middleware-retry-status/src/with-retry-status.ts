@@ -1,139 +1,158 @@
+import { type BackoffStrategy, waitFor } from "@proventuslabs/retry-strategies";
 import type { Middleware } from "@qfetch/core";
 
 /**
  * Configuration options for the {@link withRetryStatus } middleware.
  *
- * [TODO: Add detailed description of what these options control and their purpose.
- * Reference relevant web standards (RFC, MDN, etc.) if applicable.]
+ * Controls retry behavior for failed HTTP requests based on status codes. This middleware
+ * automatically retries requests that fail with retryable status codes (408, 429, 500-504)
+ * using a configurable backoff strategy.
  *
  * @example
  * ```ts
- * // Example with default configuration
- * const opts: RetryStatusOptions = {
- *   // TODO: Add realistic option examples
- * };
- * ```
+ * import { LinearBackoff } from "@proventuslabs/retry-strategies";
  *
- * @example
- * ```ts
- * // Example with alternative configuration
+ * // Linear backoff with unlimited retries (strategy determines when to stop)
  * const opts: RetryStatusOptions = {
- *   // TODO: Add alternative configuration example
+ *   strategy: () => new LinearBackoff(1000, 10000)
  * };
  * ```
  */
 export type RetryStatusOptions = {
 	/**
-	 * [TODO: Describe this option's purpose and behavior.]
+	 * Factory function that creates a backoff strategy for retry delays.
 	 *
-	 * - [TODO: Document valid values and their meanings]
-	 * - [TODO: Document edge cases or special values]
-	 * - [TODO: Document default behavior]
-	 *
-	 * @default [TODO: default value or undefined]
-	 *
-	 * @example
-	 * ```ts
-	 * { option: value }  // TODO: describe this example
-	 * ```
+	 * The strategy determines how long to wait between retry attempts. A new strategy
+	 * instance is created for each request chain to ensure independent retry timing.
 	 */
-	// option?: type;
+	strategy: () => BackoffStrategy;
+
+	/**
+	 * Maximum number of retry attempts.
+	 * - `0` = no retries
+	 * - `>= 1` = limit retry attempts
+	 * - Negative/NaN/undefined = unlimited
+	 *  @default undefined
+	 */
+	maxRetries?: number;
 };
 
 /**
- * Middleware that [TODO: brief description of what this middleware does].
- *
- * [TODO: Add more detailed description explaining the middleware's purpose,
- * when to use it, and how it integrates with the fetch API. Reference relevant
- * web standards (RFC, MDN, etc.) if applicable.]
+ * Middleware that automatically retries failed HTTP requests based on response status codes that
+ * can be interpreted as transient errors.
  *
  * ### Behavioral summary
- * - **[TODO: Key behavior 1]**: [Detailed explanation]
- * - **[TODO: Key behavior 2]**: [Detailed explanation]
- * - **[TODO: Edge case handling]**: [Explanation of how edge cases are handled]
+ * - **Automatic retry on transient failures**: Retries requests that fail with retryable
+ *   status codes (408, 429, 500-504). Successful responses (2xx) and non-retryable errors
+ *   (e.g., 400, 401, 404) are returned immediately without retries.
+ * - **Configurable backoff strategy**: Uses a provided backoff strategy to compute delays
+ *   between retry attempts. The strategy controls both the delay duration and when to stop
+ *   retrying (by returning `NaN`).
+ * - **Retry limit control**: Optionally limits the maximum number of retry attempts via
+ *   `maxRetries`. When unset, retries continue until the backoff strategy signals to stop.
+ * - **Request body cleanup**: Automatically cancels the response body stream before retrying
+ *   to prevent memory leaks. This is a best-effort operation that won't block retries if
+ *   cancellation fails.
+ * - **AbortSignal support**: Respects `AbortSignal` from the request to allow cancellation
+ *   during retry delays. If the signal is aborted, the wait is interrupted and an error
+ *   is thrown.
+ *
+ * ### Retryable status codes
+ * The following HTTP status codes trigger automatic retries (per [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes)):
+ * - `408 Request Timeout`
+ * - `429 Too Many Requests`
+ * - `500 Internal Server Error`
+ * - `502 Bad Gateway`
+ * - `503 Service Unavailable`
+ * - `504 Gateway Timeout`
  *
  * ### Important limitations
- * [TODO: Document any known limitations, constraints, or gotchas that users
- * should be aware of. For example, incompatibilities with certain request types,
- * browser limitations, performance considerations, etc.]
+ * - **No automatic `Retry-After` header handling**: The middleware does not automatically
+ *   parse or respect `Retry-After` response headers.
+ * - **Non-idempotent requests**: The middleware retries all requests regardless of HTTP
+ *   method. Be cautious when using with non-idempotent methods (POST, PATCH) as retries
+ *   may cause duplicate operations if the initial request partially succeeded.
+ * - **Request body consumption**: If the request has a body stream that can only be read
+ *   once (e.g., a `ReadableStream`), retries will fail. Use repeatable body types
+ *   (string, Blob, FormData) or implement request cloning separately.
+ * - **Memory considerations**: Failed response bodies are cancelled before retrying, but
+ *   if cancellation fails, the body may remain in memory until garbage collected.
+ *
+ * @param opts - Configuration parameters controlling retry behavior and backoff strategy.
+ *               See {@link RetryStatusOptions} for details.
+ *
+ * @throws {unknown} The reason of the AbortSignal if the operation is aborted (generally {@link DOMException} `AbortError`).
+ * @throws {RangeError} If the strategy delay exceeds INT32_MAX (2147483647ms, approximately 24.8 days).
  *
  * @example
  * ```ts
- * // Basic usage
+ * // Linear backoff with unlimited retries
  * import { withRetryStatus } from "@qfetch/middleware-retry-status";
- *
- * const qfetch = withRetryStatus()(fetch);
- * const response = await qfetch("https://example.com");
- * ```
- *
- * @example
- * ```ts
- * // Usage with options
- * import { withRetryStatus } from "@qfetch/middleware-retry-status";
+ * import { LinearBackoff } from "@proventuslabs/retry-strategies";
  *
  * const qfetch = withRetryStatus({
- *   // TODO: Add realistic configuration
+ *   strategy: () => new LinearBackoff(1000, 10000)
  * })(fetch);
  *
- * const response = await qfetch("https://example.com");
+ * const response = await qfetch("https://api.example.com/data");
  * ```
- *
- * @example
- * ```ts
- * // Composition with other middlewares
- * import { withRetryStatus } from "@qfetch/middleware-retry-status";
- * import { compose } from "@qfetch/core";
- *
- * const qfetch = compose(
- *   withRetryStatus(),
- *   // other middlewares...
- * )(fetch);
- *
- * const response = await qfetch("https://example.com");
- * ```
- *
- * @param opts - Optional configuration parameters controlling middleware behavior.
- *               See {@link RetryStatusOptions} for details.
- * @returns A middleware function compatible with `@qfetch/core` that [TODO: describe
- *          what transformation/behavior this middleware applies].
  */
-export const withRetryStatus: Middleware<RetryStatusOptions | undefined> = (
-	opts = {},
-) => {
-	// TODO: Extract and validate options
-	// const {} = opts;
-
-	// TODO: Add any initialization logic, constants, or helper setup here
-	// Example: const headerName = "X-Custom-Header";
-	// Example: const validStatuses = new Set([200, 201, 204]);
+export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
+	const maxRetries =
+		typeof opts.maxRetries !== "number" ||
+		opts.maxRetries < 0 ||
+		Number.isNaN(opts.maxRetries)
+			? undefined
+			: opts.maxRetries;
 
 	return (next) => async (input, init) => {
-		// TODO: Implement pre-request logic (request transformation, validation, etc.)
+		// Extract the signal for this request
+		const signal =
+			init?.signal ?? (input instanceof Request ? input.signal : undefined);
+		// Get a new strategy for this chain of retries
+		const strategy = opts.strategy();
 
-		// Execute the next middleware or fetch
-		const response = await next(input, init);
+		let response = await next(input, init);
 
-		// TODO: Implement post-response logic (response transformation, error handling, etc.)
+		for (
+			let attempt = 0;
+			maxRetries === undefined || attempt < maxRetries;
+			attempt += 1
+		) {
+			// If successful or not a retryable status, passthrough the response
+			if (response.ok || !RETRYABLE_STATUSES.has(response.status)) break;
+
+			// Compute the next backoff delay
+			const delay = strategy.nextBackoff();
+
+			// When the strategy says we should stop, passthrough the response
+			if (Number.isNaN(delay)) break;
+
+			// Consume the previous response body in case of retry - it is done before throws so that
+			// we guarantee that the body is canceled in case of any error
+			await response.body?.cancel("Retry scheduled").catch(() => {
+				// Note: If cancellation fails, the response body may remain in memory until garbage collected,
+				// potentially consuming resources. However, this is a best-effort cleanup that shouldn't block retries.
+			});
+
+			// Wait before retrying
+			await waitFor(delay, signal);
+
+			// Retry the original request
+			response = await next(input, init);
+		}
 
 		return response;
 	};
 };
 
-// TODO: Add helper functions below if needed
-// /**
-//  * [Helper function description]
-//  *
-//  * @param param - [parameter description]
-//  * @returns [return value description]
-//  */
-// const helperFunction = (param: type): returnType => {
-//   // implementation
-// };
-
-// TODO: Add constants with documentation if needed
-// /**
-//  * [Constant description and purpose]
-//  *
-//  * @see [Link to relevant standard or documentation]
-//  */
-// const CONSTANT_NAME = value;
+/**
+ * HTTP status codes that indicate a retryable condition.
+ * - `408 Request timeout`
+ * - `429 Too Many Requests`
+ * - `500 Internal Server Error`
+ * - `502 Bad Gateway`
+ * - `503 Service Unavailable`
+ * - `504 Gateway Timeout`
+ */
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
