@@ -126,7 +126,7 @@ pnpm generate  # Creates from turbo templates
      "extra-files": [
        {
          "type": "json",
-         "path": "packages/<package-name>/jsr.json",
+         "path": "jsr.json", // relative and jailed to the package
          "jsonpath": "$.version"
        }
      ]
