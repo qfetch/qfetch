@@ -5,7 +5,7 @@ import type { Middleware } from "@qfetch/core";
  * Configuration options for the {@link withRetryStatus } middleware.
  *
  * Controls retry behavior for failed HTTP requests based on status codes. This middleware
- * automatically retries requests that fail with retryable status codes (408, 429, 500-504)
+ * automatically retries requests that fail with retryable status codes (408, 429, 500, 502, 503, 504)
  * using a configurable backoff strategy.
  *
  * @example
@@ -51,8 +51,8 @@ export type RetryStatusOptions = {
  *
  * ### Behavioral summary
  * - **Automatic retry on transient failures**: Retries requests that fail with retryable
- *   status codes (408, 429, 500-504). Successful responses (2xx) and non-retryable errors
- *   (e.g., 400, 401, 404) are returned immediately without retries.
+ *   status codes (408, 429, 500, 502, 503, 504). Successful responses (2xx) and non-retryable
+ *   errors (e.g., 400, 401, 404, 501) are returned immediately without retries.
  * - **Configurable backoff strategy**: Uses a provided backoff strategy to compute delays
  *   between retry attempts. The strategy controls both the delay duration and when to stop
  *   retrying (by returning `NaN`).
@@ -77,7 +77,9 @@ export type RetryStatusOptions = {
  *
  * ### Important limitations
  * - **No automatic `Retry-After` header handling**: The middleware does not automatically
- *   parse or respect `Retry-After` response headers.
+ *   parse or respect `Retry-After` response headers. The backoff strategy is solely responsible
+ *   for computing retry delays. To respect `Retry-After` headers, use a separate middleware that
+ *   parses the header and combines it with this middleware.
  * - **Non-idempotent requests**: The middleware retries all requests regardless of HTTP
  *   method. Be cautious when using with non-idempotent methods (POST, PATCH) as retries
  *   may cause duplicate operations if the initial request partially succeeded.
@@ -159,7 +161,7 @@ export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
 
 /**
  * HTTP status codes that indicate a retryable condition.
- * - `408 Request timeout`
+ * - `408 Request Timeout`
  * - `429 Too Many Requests`
  * - `500 Internal Server Error`
  * - `502 Bad Gateway`
