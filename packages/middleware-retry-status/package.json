@@ -22,14 +22,14 @@
 	],
 	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middleware-retry-status#readme",
 	"keywords": [
+		"backoff",
 		"composable",
+		"error-handling",
 		"fetch",
 		"http",
 		"middleware",
-		"retry",
-		"backoff",
 		"resilience",
-		"error-handling",
+		"retry",
 		"transient-errors"
 	],
 	"license": "MIT",
