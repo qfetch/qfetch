@@ -49,5 +49,8 @@
 		"test:unit": "node --test \"src/**/*.test.ts\""
 	},
 	"type": "module",
-	"types": "./dist/index.d.ts"
+	"types": "./dist/index.d.ts",
+	"peerDependencies": {
+		"@proventuslabs/retry-strategies": "^0.1.1"
+	}
 }
