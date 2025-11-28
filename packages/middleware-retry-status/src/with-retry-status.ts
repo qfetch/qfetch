@@ -10,11 +10,16 @@ import type { Middleware } from "@qfetch/core";
  *
  * @example
  * ```ts
- * import { LinearBackoff } from "@proventuslabs/retry-strategies";
+ * import { LinearBackoff, upto } from "@proventuslabs/retry-strategies";
  *
  * // Linear backoff with unlimited retries (strategy determines when to stop)
  * const opts: RetryStatusOptions = {
  *   strategy: () => new LinearBackoff(1000, 10000)
+ * };
+ *
+ * // Linear backoff with maximum 3 retries
+ * const optsLimited: RetryStatusOptions = {
+ *   strategy: () => upto(3, new LinearBackoff(1000, 10000))
  * };
  * ```
  */
@@ -22,19 +27,22 @@ export type RetryStatusOptions = {
 	/**
 	 * Factory function that creates a backoff strategy for retry delays.
 	 *
-	 * The strategy determines how long to wait between retry attempts. A new strategy
-	 * instance is created for each request chain to ensure independent retry timing.
+	 * The strategy determines how long to wait between retry attempts and when to stop
+	 * retrying (by returning `NaN`). A new strategy instance is created for each request
+	 * chain to ensure independent retry timing.
+	 *
+	 * To limit the number of retries, wrap the strategy with the `upto()` function from
+	 * `@proventuslabs/retry-strategies`:
+	 *
+	 * @example
+	 * ```ts
+	 * import { LinearBackoff, upto } from "@proventuslabs/retry-strategies";
+	 *
+	 * // Limit to 3 retries
+	 * strategy: () => upto(3, new LinearBackoff(1000, 10000))
+	 * ```
 	 */
 	strategy: () => BackoffStrategy;
-
-	/**
-	 * Maximum number of retry attempts.
-	 * - `0` = no retries
-	 * - `>= 1` = limit retry attempts
-	 * - Negative/NaN/undefined = unlimited
-	 *  @default undefined
-	 */
-	maxRetries?: number;
 };
 
 /**
@@ -48,8 +56,9 @@ export type RetryStatusOptions = {
  * - **Configurable backoff strategy**: Uses a provided backoff strategy to compute delays
  *   between retry attempts. The strategy controls both the delay duration and when to stop
  *   retrying (by returning `NaN`).
- * - **Retry limit control**: Optionally limits the maximum number of retry attempts via
- *   `maxRetries`. When unset, retries continue until the backoff strategy signals to stop.
+ * - **Retry limit control**: Limit the number of retry attempts by wrapping your strategy
+ *   with the `upto()` function from `@proventuslabs/retry-strategies`. The middleware
+ *   continues retrying until the strategy returns `NaN`.
  * - **Request body cleanup**: Automatically cancels the response body stream before retrying
  *   to prevent memory leaks. This is a best-effort operation that won't block retries if
  *   cancellation fails.
@@ -86,6 +95,19 @@ export type RetryStatusOptions = {
  *
  * @example
  * ```ts
+ * // Linear backoff with maximum 5 retries
+ * import { withRetryStatus } from "@qfetch/middleware-retry-status";
+ * import { LinearBackoff, upto } from "@proventuslabs/retry-strategies";
+ *
+ * const qfetch = withRetryStatus({
+ *   strategy: () => upto(5, new LinearBackoff(1000, 10000))
+ * })(fetch);
+ *
+ * const response = await qfetch("https://api.example.com/data");
+ * ```
+ *
+ * @example
+ * ```ts
  * // Linear backoff with unlimited retries
  * import { withRetryStatus } from "@qfetch/middleware-retry-status";
  * import { LinearBackoff } from "@proventuslabs/retry-strategies";
@@ -98,13 +120,6 @@ export type RetryStatusOptions = {
  * ```
  */
 export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
-	const maxRetries =
-		typeof opts.maxRetries !== "number" ||
-		opts.maxRetries < 0 ||
-		Number.isNaN(opts.maxRetries)
-			? undefined
-			: opts.maxRetries;
-
 	return (next) => async (input, init) => {
 		// Extract the signal for this request
 		const signal =
@@ -114,11 +129,7 @@ export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
 
 		let response = await next(input, init);
 
-		for (
-			let attempt = 0;
-			maxRetries === undefined || attempt < maxRetries;
-			attempt += 1
-		) {
+		while (true) {
 			// If successful or not a retryable status, passthrough the response
 			if (response.ok || !RETRYABLE_STATUSES.has(response.status)) break;
 
