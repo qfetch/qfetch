@@ -168,4 +168,6 @@ export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
  * - `503 Service Unavailable`
  * - `504 Gateway Timeout`
  */
-const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([
+	408, 429, 500, 502, 503, 504,
+]);
