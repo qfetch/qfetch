@@ -762,4 +762,184 @@ suite("withRetryStatus - Unit", () => {
 			);
 		});
 	});
+
+	describe("custom retryable status codes", () => {
+		test("retries only on custom status codes", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			ctx.mock.timers.enable({ apis: ["setTimeout"] });
+
+			let callCount = 0;
+			const fetchMock = ctx.mock.fn(fetch, async () => {
+				callCount++;
+				if (callCount === 1) {
+					return new Response(null, { status: 429 });
+				}
+				return new Response("ok", { status: 200 });
+			});
+
+			// Only retry on 429 and 503
+			const qfetch = withRetryStatus({
+				strategy: createMockStrategy([1000]),
+				retryableStatuses: new Set([429, 503]),
+			})(fetchMock);
+
+			// Act
+			const responsePromise = qfetch("https://example.com");
+			await flushMicrotasks();
+			ctx.mock.timers.tick(1000);
+			const response = await responsePromise;
+
+			// Assert
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				2,
+				"retries on custom status code 429",
+			);
+			ctx.assert.strictEqual(
+				response.status,
+				200,
+				"returns successful response after retry",
+			);
+		});
+
+		test("does not retry on default codes when custom codes are provided", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const fetchMock = ctx.mock.fn(
+				fetch,
+				async () => new Response(null, { status: 500 }),
+			);
+
+			// Custom codes that don't include 500
+			const qfetch = withRetryStatus({
+				strategy: createMockStrategy([1000]),
+				retryableStatuses: new Set([429, 502]),
+			})(fetchMock);
+
+			// Act
+			const response = await qfetch("https://example.com");
+
+			// Assert
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				1,
+				"does not retry on 500 when not in custom set",
+			);
+			ctx.assert.strictEqual(
+				response.status,
+				500,
+				"returns error response without retry",
+			);
+		});
+
+		test("retries on multiple custom status codes", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(3);
+			const customStatuses = [429, 502, 520];
+
+			for (const status of customStatuses) {
+				await ctx.test(`status ${status}`, async (ctx: TestContext) => {
+					// Arrange
+					ctx.plan(1);
+					ctx.mock.timers.enable({ apis: ["setTimeout"] });
+
+					let callCount = 0;
+					const fetchMock = ctx.mock.fn(fetch, async () => {
+						callCount++;
+						if (callCount === 1) {
+							return new Response(null, { status });
+						}
+						return new Response("ok", { status: 200 });
+					});
+
+					const qfetch = withRetryStatus({
+						strategy: createMockStrategy([1000]),
+						retryableStatuses: new Set([429, 502, 520]),
+					})(fetchMock);
+
+					// Act
+					const responsePromise = qfetch("https://example.com");
+					await flushMicrotasks();
+					ctx.mock.timers.tick(1000);
+					await responsePromise;
+
+					// Assert
+					ctx.assert.strictEqual(
+						fetchMock.mock.callCount(),
+						2,
+						"retries the request",
+					);
+				});
+			}
+		});
+
+		test("uses default status codes when option is not provided", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			ctx.mock.timers.enable({ apis: ["setTimeout"] });
+
+			let callCount = 0;
+			const fetchMock = ctx.mock.fn(fetch, async () => {
+				callCount++;
+				if (callCount === 1) {
+					return new Response(null, { status: 503 });
+				}
+				return new Response("ok", { status: 200 });
+			});
+
+			// No custom status codes provided
+			const qfetch = withRetryStatus({
+				strategy: createMockStrategy([1000]),
+			})(fetchMock);
+
+			// Act
+			const responsePromise = qfetch("https://example.com");
+			await flushMicrotasks();
+			ctx.mock.timers.tick(1000);
+			const response = await responsePromise;
+
+			// Assert
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				2,
+				"retries on default status code 503",
+			);
+			ctx.assert.strictEqual(
+				response.status,
+				200,
+				"returns successful response",
+			);
+		});
+
+		test("allows empty set of retryable status codes", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const fetchMock = ctx.mock.fn(
+				fetch,
+				async () => new Response(null, { status: 500 }),
+			);
+
+			// Empty set means no retries on any status code
+			const qfetch = withRetryStatus({
+				strategy: createMockStrategy([1000]),
+				retryableStatuses: new Set(),
+			})(fetchMock);
+
+			// Act
+			const response = await qfetch("https://example.com");
+
+			// Assert
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				1,
+				"does not retry with empty status set",
+			);
+			ctx.assert.strictEqual(
+				response.status,
+				500,
+				"returns error response without retry",
+			);
+		});
+	});
 });

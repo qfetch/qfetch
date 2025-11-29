@@ -371,6 +371,49 @@ suite("withRetryStatus - Integration", { concurrency: true }, () => {
 		});
 	});
 
+	describe("custom retryable status codes", () => {
+		test("retries only on custom status code 429", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(3);
+			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
+				// First request returns 429 (should retry with custom config)
+				if (count === 1) {
+					res.writeHead(429, { "Content-Type": "text/plain" });
+					res.end("Too Many Requests");
+					return;
+				}
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ message: "Success", attempt: count }));
+			});
+
+			// Configure to only retry on 429
+			const qfetch = withRetryStatus({
+				strategy: () => new ConstantBackoff(50),
+				retryableStatuses: new Set([429]),
+			})(fetch);
+
+			// Act
+			const response = await qfetch(`${baseUrl}/custom-retry`, {
+				signal: ctx.signal,
+			});
+			const body = await response.json();
+
+			// Assert
+			ctx.assert.strictEqual(
+				response.status,
+				200,
+				"successfully retries on custom status 429",
+			);
+			ctx.assert.strictEqual(body.attempt, 2, "retries exactly once on 429");
+			ctx.assert.strictEqual(
+				body.message,
+				"Success",
+				"returns successful response",
+			);
+		});
+	});
+
 	describe("real-world scenarios", () => {
 		test("handles intermittent network failures", async (ctx: TestContext) => {
 			// Arrange
