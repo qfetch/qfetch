@@ -5,8 +5,9 @@ import type { Middleware } from "@qfetch/core";
  * Configuration options for the {@link withRetryStatus } middleware.
  *
  * Controls retry behavior for failed HTTP requests based on status codes. This middleware
- * automatically retries requests that fail with retryable status codes (408, 429, 500, 502, 503, 504)
- * using a configurable backoff strategy.
+ * automatically retries requests that fail with retryable status codes using a configurable
+ * backoff strategy. By default, it retries on standard transient error codes (408, 429, 500,
+ * 502, 503, 504), but this can be customized.
  *
  * @example
  * ```ts
@@ -20,6 +21,12 @@ import type { Middleware } from "@qfetch/core";
  * // Linear backoff with maximum 3 retries
  * const optsLimited: RetryStatusOptions = {
  *   strategy: () => upto(3, new LinearBackoff(1000, 10000))
+ * };
+ *
+ * // Custom retryable status codes
+ * const optsCustom: RetryStatusOptions = {
+ *   strategy: () => upto(3, new LinearBackoff(1000, 10000)),
+ *   retryableStatuses: new Set([429, 502, 503, 504])
  * };
  * ```
  */
@@ -43,6 +50,22 @@ export type RetryStatusOptions = {
 	 * ```
 	 */
 	strategy: () => BackoffStrategy;
+
+	/**
+	 * Set of HTTP status codes that should trigger automatic retries.
+	 *
+	 * Defaults to the standard retryable status codes: `408`, `429`, `500`, `502`, `503`, `504`.
+	 * Override this to customize which status codes should be retried.
+	 *
+	 * @example
+	 * ```ts
+	 * // Retry only on rate limits and gateway errors
+	 * retryableStatuses: new Set([429, 502, 503, 504])
+	 * ```
+	 *
+	 * @default new Set([408, 429, 500, 502, 503, 504])
+	 */
+	retryableStatuses?: ReadonlySet<number>;
 };
 
 /**
@@ -51,8 +74,9 @@ export type RetryStatusOptions = {
  *
  * ### Behavioral summary
  * - **Automatic retry on transient failures**: Retries requests that fail with retryable
- *   status codes (408, 429, 500, 502, 503, 504). Successful responses (2xx) and non-retryable
- *   errors (e.g., 400, 401, 404, 501) are returned immediately without retries.
+ *   status codes. By default, retries on 408, 429, 500, 502, 503, 504. The set of retryable
+ *   status codes can be customized via the `retryableStatuses` option. Successful responses (2xx)
+ *   and non-retryable errors are returned immediately without retries.
  * - **Configurable backoff strategy**: Uses a provided backoff strategy to compute delays
  *   between retry attempts. The strategy controls both the delay duration and when to stop
  *   retrying (by returning `NaN`).
@@ -67,13 +91,16 @@ export type RetryStatusOptions = {
  *   is thrown.
  *
  * ### Retryable status codes
- * The following HTTP status codes trigger automatic retries (per [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes)):
+ * By default, the following HTTP status codes trigger automatic retries (per [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes)):
  * - `408 Request Timeout`
  * - `429 Too Many Requests`
  * - `500 Internal Server Error`
  * - `502 Bad Gateway`
  * - `503 Service Unavailable`
  * - `504 Gateway Timeout`
+ *
+ * This default set can be overridden using the `retryableStatuses` option to customize which
+ * status codes should trigger retries.
  *
  * ### Important limitations
  * - **No automatic `Retry-After` header handling**: The middleware does not automatically
@@ -120,8 +147,26 @@ export type RetryStatusOptions = {
  *
  * const response = await qfetch("https://api.example.com/data");
  * ```
+ *
+ * @example
+ * ```ts
+ * // Custom retryable status codes (only retry on rate limits and gateway errors)
+ * import { withRetryStatus } from "@qfetch/middleware-retry-status";
+ * import { ExponentialBackoff, upto } from "@proventuslabs/retry-strategies";
+ *
+ * const qfetch = withRetryStatus({
+ *   strategy: () => upto(3, new ExponentialBackoff(500, 5000, 2)),
+ *   retryableStatuses: new Set([429, 502, 503, 504])
+ * })(fetch);
+ *
+ * const response = await qfetch("https://api.example.com/data");
+ * ```
  */
 export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
+	// Get the set of retryable status codes, defaulting to the standard set
+	const retryableStatuses =
+		opts.retryableStatuses ?? DEFAULT_RETRYABLE_STATUSES;
+
 	return (next) => async (input, init) => {
 		// Extract the signal for this request
 		const signal =
@@ -133,7 +178,7 @@ export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
 
 		while (true) {
 			// If successful or not a retryable status, passthrough the response
-			if (response.ok || !RETRYABLE_STATUSES.has(response.status)) break;
+			if (response.ok || !retryableStatuses.has(response.status)) break;
 
 			// Compute the next backoff delay
 			const delay = strategy.nextBackoff();
@@ -160,7 +205,7 @@ export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
 };
 
 /**
- * HTTP status codes that indicate a retryable condition.
+ * Default HTTP status codes that indicate a retryable condition.
  * - `408 Request Timeout`
  * - `429 Too Many Requests`
  * - `500 Internal Server Error`
@@ -168,6 +213,6 @@ export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
  * - `503 Service Unavailable`
  * - `504 Gateway Timeout`
  */
-const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([
+const DEFAULT_RETRYABLE_STATUSES: ReadonlySet<number> = new Set([
 	408, 429, 500, 502, 503, 504,
 ]);
