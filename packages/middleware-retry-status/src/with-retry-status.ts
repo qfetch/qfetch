@@ -188,7 +188,7 @@ export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
 
 			// Consume the previous response body in case of retry - it is done before throws so that
 			// we guarantee that the body is canceled in case of any error
-			await response.body?.cancel("Retry scheduled").catch(() => {
+			await response.body?.cancel(CANCEL_REASON).catch(() => {
 				// Note: If cancellation fails, the response body may remain in memory until garbage collected,
 				// potentially consuming resources. However, this is a best-effort cleanup that shouldn't block retries.
 			});
@@ -203,6 +203,11 @@ export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
 		return response;
 	};
 };
+
+/**
+ * The reason passed to body cancellation.
+ */
+export const CANCEL_REASON = "Retry scheduled";
 
 /**
  * Default HTTP status codes that indicate a retryable condition.
