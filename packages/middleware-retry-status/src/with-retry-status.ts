@@ -11,21 +11,21 @@ import type { Middleware } from "@qfetch/core";
  *
  * @example
  * ```ts
- * import { LinearBackoff, upto } from "@proventuslabs/retry-strategies";
+ * import { linear, upto } from "@proventuslabs/retry-strategies";
  *
  * // Linear backoff with unlimited retries (strategy determines when to stop)
  * const opts: RetryStatusOptions = {
- *   strategy: () => new LinearBackoff(1000, 10000)
+ *   strategy: () => linear(1000, 10000)
  * };
  *
  * // Linear backoff with maximum 3 retries
  * const optsLimited: RetryStatusOptions = {
- *   strategy: () => upto(3, new LinearBackoff(1000, 10000))
+ *   strategy: () => upto(3, linear(1000, 10000))
  * };
  *
  * // Custom retryable status codes
  * const optsCustom: RetryStatusOptions = {
- *   strategy: () => upto(3, new LinearBackoff(1000, 10000)),
+ *   strategy: () => upto(3, linear(1000, 10000)),
  *   retryableStatuses: new Set([429, 502, 503, 504])
  * };
  * ```
@@ -43,10 +43,10 @@ export type RetryStatusOptions = {
 	 *
 	 * @example
 	 * ```ts
-	 * import { LinearBackoff, upto } from "@proventuslabs/retry-strategies";
+	 * import { linear, upto } from "@proventuslabs/retry-strategies";
 	 *
 	 * // Limit to 3 retries
-	 * strategy: () => upto(3, new LinearBackoff(1000, 10000))
+	 * strategy: () => upto(3, linear(1000, 10000))
 	 * ```
 	 */
 	strategy: () => BackoffStrategy;
@@ -126,10 +126,10 @@ export type RetryStatusOptions = {
  * ```ts
  * // Linear backoff with maximum 5 retries
  * import { withRetryStatus } from "@qfetch/middleware-retry-status";
- * import { LinearBackoff, upto } from "@proventuslabs/retry-strategies";
+ * import { linear, upto } from "@proventuslabs/retry-strategies";
  *
  * const qfetch = withRetryStatus({
- *   strategy: () => upto(5, new LinearBackoff(1000, 10000))
+ *   strategy: () => upto(5, linear(1000, 10000))
  * })(fetch);
  *
  * const response = await qfetch("https://api.example.com/data");
@@ -139,10 +139,10 @@ export type RetryStatusOptions = {
  * ```ts
  * // Linear backoff with unlimited retries
  * import { withRetryStatus } from "@qfetch/middleware-retry-status";
- * import { LinearBackoff } from "@proventuslabs/retry-strategies";
+ * import { linear } from "@proventuslabs/retry-strategies";
  *
  * const qfetch = withRetryStatus({
- *   strategy: () => new LinearBackoff(1000, 10000)
+ *   strategy: () => linear(1000, 10000)
  * })(fetch);
  *
  * const response = await qfetch("https://api.example.com/data");
@@ -152,10 +152,10 @@ export type RetryStatusOptions = {
  * ```ts
  * // Custom retryable status codes (only retry on rate limits and gateway errors)
  * import { withRetryStatus } from "@qfetch/middleware-retry-status";
- * import { ExponentialBackoff, upto } from "@proventuslabs/retry-strategies";
+ * import { exponential, upto } from "@proventuslabs/retry-strategies";
  *
  * const qfetch = withRetryStatus({
- *   strategy: () => upto(3, new ExponentialBackoff(500, 5000, 2)),
+ *   strategy: () => upto(3, exponential(500, 5000, 2)),
  *   retryableStatuses: new Set([429, 502, 503, 504])
  * })(fetch);
  *

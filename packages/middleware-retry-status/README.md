@@ -8,14 +8,10 @@ Intended for use with the composable middleware system provided by [`@qfetch/cor
 
 ## Installation
 
-```bash
-npm install @qfetch/middleware-retry-status
-```
-
-This middleware requires [`@proventuslabs/retry-strategies`](https://github.com/proventuslabs/js/tree/main/packages/retry-strategies) as a peer dependency:
+This middleware requires [`@proventuslabs/retry-strategies`](https://github.com/proventuslabs/js/tree/main/packages/retry-strategies) as a peer dependency.
 
 ```bash
-npm install @proventuslabs/retry-strategies
+npm install @qfetch/middleware-retry-status @proventuslabs/retry-strategies
 ```
 
 ## Usage
@@ -24,11 +20,11 @@ npm install @proventuslabs/retry-strategies
 
 ```typescript
 import { withRetryStatus } from '@qfetch/middleware-retry-status';
-import { LinearBackoff, upto } from '@proventuslabs/retry-strategies';
+import { linear, upto } from '@proventuslabs/retry-strategies';
 
 // Retry up to 3 times with linear backoff
 const qfetch = withRetryStatus({
-  strategy: () => upto(3, new LinearBackoff(1000, 5000))
+  strategy: () => upto(3, linear(1000, 5000))
 })(fetch);
 
 const response = await qfetch('https://api.example.com/data');
@@ -38,11 +34,11 @@ const response = await qfetch('https://api.example.com/data');
 
 ```typescript
 import { withRetryStatus } from '@qfetch/middleware-retry-status';
-import { LinearBackoff, upto } from '@proventuslabs/retry-strategies';
+import { linear, upto } from '@proventuslabs/retry-strategies';
 
 // Only retry on specific status codes
 const qfetch = withRetryStatus({
-  strategy: () => upto(3, new LinearBackoff(1000, 5000)),
+  strategy: () => upto(3, linear(1000, 5000)),
   retryableStatuses: new Set([429, 503])
 })(fetch);
 
