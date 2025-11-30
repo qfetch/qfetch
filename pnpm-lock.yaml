@@ -51,7 +51,7 @@ importers:
   packages/middleware-retry-status:
     dependencies:
       '@proventuslabs/retry-strategies':
-        specifier: ^0.1.1
+        specifier: ^0.1
         version: 0.1.1
     devDependencies:
       '@qfetch/core':
