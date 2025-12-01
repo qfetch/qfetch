@@ -22,21 +22,24 @@
 	],
 	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middleware-retry-after#readme",
 	"keywords": [
-		"retry",
-		"retry-after",
-		"rate-limiting",
 		"429",
 		"503",
-		"rfc9110",
 		"composable",
 		"fetch",
 		"http",
 		"middleware",
+		"rate-limiting",
+		"retry",
+		"retry-after",
+		"rfc9110",
 		"typescript"
 	],
 	"license": "MIT",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
+	"peerDependencies": {
+		"@proventuslabs/retry-strategies": "^0.1"
+	},
 	"private": false,
 	"publishConfig": {
 		"access": "public"

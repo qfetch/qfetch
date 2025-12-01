@@ -1,9 +1,16 @@
 import { describe, suite, type TestContext, test } from "node:test";
 
+import {
+	constant,
+	fullJitter,
+	upto,
+	zero,
+} from "@proventuslabs/retry-strategies";
+
 import { withRetryAfter } from "./with-retry-after.ts";
 
 /* node:coverage disable */
-suite("withRetryAfter middleware - Unit tests", () => {
+suite("withRetryAfter middleware - Unit", () => {
 	const flushMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
 
 	describe("successful responses are passed through unchanged", () => {
@@ -11,7 +18,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			// Arrange
 			ctx.plan(1);
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = withRetryAfter()(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 			// Act
 			const response = await qfetch("users");
@@ -35,7 +42,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 						headers: { "Retry-After": "0" },
 					}),
 			);
-			const qfetch = withRetryAfter()(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 			// Act
 			const response = await qfetch("users");
@@ -62,7 +69,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 					fetch,
 					async () => new Response("not ok", { status: 429 }),
 				);
-				const qfetch = withRetryAfter()(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 				// Act
 				const response = await qfetch("users");
@@ -83,7 +90,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 					fetch,
 					async () => new Response("not ok", { status: 503 }),
 				);
-				const qfetch = withRetryAfter()(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 				// Act
 				const response = await qfetch("users");
@@ -113,7 +120,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 							headers: { "Retry-After": "" },
 						}),
 				);
-				const qfetch = withRetryAfter()(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 				// Act
 				const response = await qfetch("users");
@@ -143,7 +150,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 							headers: { "Retry-After": "invalid-number" },
 						}),
 				);
-				const qfetch = withRetryAfter()(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 				// Act
 				const response = await qfetch("users");
@@ -173,7 +180,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 							headers: { "Retry-After": "10.1" },
 						}),
 				);
-				const qfetch = withRetryAfter()(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 				// Act
 				const response = await qfetch("users");
@@ -203,7 +210,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 							headers: { "Retry-After": "-10" },
 						}),
 				);
-				const qfetch = withRetryAfter()(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 				// Act
 				const response = await qfetch("users");
@@ -233,7 +240,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 							headers: { "Retry-After": "2024-12-01T10:30:00Z" },
 						}),
 				);
-				const qfetch = withRetryAfter()(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => zero() })(fetchMock);
 
 				// Act
 				const response = await qfetch("users");
@@ -270,7 +277,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				// Arrange
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 1 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(1, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -313,7 +322,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				// Arrange
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 1 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(1, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -368,7 +379,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				// Arrange
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -412,7 +425,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				// Arrange
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -456,7 +471,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				// Arrange
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -514,7 +531,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.mock.timers.setTime(new Date("2025-01-15T10:00:00.000Z").getTime());
 				const futureDate = "Wed, 15 Jan 2025 10:00:10 GMT";
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -560,7 +579,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.mock.timers.setTime(new Date("2025-01-15T10:00:00.000Z").getTime());
 				const presentDate = "Wed, 15 Jan 2025 10:00:00 GMT";
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -606,7 +627,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.mock.timers.setTime(new Date("2025-01-15T10:00:00.000Z").getTime());
 				const pastDate = "Wed, 15 Jan 2025 09:59:50 GMT";
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -664,7 +687,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				// Arrange
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+				const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+					fetchMock,
+				);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
@@ -709,8 +734,8 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 				const qfetch = withRetryAfter({
-					maxRetries: 3,
-					maxDelayTime: -100,
+					strategy: () => upto(3, zero()),
+					maxServerDelay: -100,
 				})(fetchMock);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
@@ -756,9 +781,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 				const qfetch = withRetryAfter({
-					maxRetries: 3,
+					strategy: () => upto(3, zero()),
 					// biome-ignore lint/suspicious/noExplicitAny: we want to test invalid options
-					maxDelayTime: "invalid" as any,
+					maxServerDelay: "invalid" as any,
 				})(fetchMock);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
@@ -804,8 +829,8 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.plan(3);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 				const qfetch = withRetryAfter({
-					maxRetries: 3,
-					maxDelayTime: Number.NaN,
+					strategy: () => upto(3, zero()),
+					maxServerDelay: Number.NaN,
 				})(fetchMock);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
@@ -853,8 +878,8 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 			const qfetch = withRetryAfter({
-				maxRetries: 3,
-				maxDelayTime: 20_000,
+				strategy: () => upto(3, zero()),
+				maxServerDelay: 20_000,
 			})(fetchMock);
 			fetchMock.mock.mockImplementationOnce(
 				async () =>
@@ -890,8 +915,8 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 			const qfetch = withRetryAfter({
-				maxRetries: 3,
-				maxDelayTime: 0,
+				strategy: () => upto(3, zero()),
+				maxServerDelay: 0,
 			})(fetchMock);
 			fetchMock.mock.mockImplementationOnce(
 				async () =>
@@ -937,8 +962,8 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.plan(2);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 				const qfetch = withRetryAfter({
-					maxRetries: 3,
-					maxDelayTime: 5_000,
+					strategy: () => upto(3, zero()),
+					maxServerDelay: 5_000,
 				})(fetchMock);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
@@ -971,8 +996,8 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.plan(2);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 				const qfetch = withRetryAfter({
-					maxRetries: 3,
-					maxDelayTime: 0,
+					strategy: () => upto(3, zero()),
+					maxServerDelay: 0,
 				})(fetchMock);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
@@ -1006,7 +1031,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+				fetchMock,
+			);
 			fetchMock.mock.mockImplementationOnce(
 				async () =>
 					new Response("not ok", {
@@ -1022,9 +1049,8 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			// Assert
 			await ctx.assert.rejects(
 				() => presponse,
-				(e: unknown) =>
-					e instanceof DOMException && e.name === "ConstraintError",
-				"Should throw ConstraintError when delay exceeds INT32_MAX",
+				(e: unknown) => e instanceof RangeError,
+				"Should throw RangeError when delay exceeds INT32_MAX",
 			);
 			ctx.assert.strictEqual(
 				fetchMock.mock.callCount(),
@@ -1034,160 +1060,15 @@ suite("withRetryAfter middleware - Unit tests", () => {
 		});
 	});
 
-	describe("allows enforcement of a maximum ceiling for retry attempts", () => {
-		test("retries without a maximum retry limit", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(4);
-
-			ctx.beforeEach((ctx: TestContext) => {
-				ctx.mock.timers.enable({ apis: ["setTimeout"] });
-			});
-			ctx.afterEach((ctx: TestContext) => {
-				ctx.mock.timers.reset();
-			});
-
-			await ctx.test("undefined maxRetries", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter()(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "1" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(1_000);
-				const response = await presponse;
-				const body = await response.text();
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried once without retry limit",
-				);
-				ctx.assert.strictEqual(
-					body,
-					"ok",
-					"Response body should be from successful retry",
-				);
-			});
-
-			await ctx.test("negative maxRetries", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: -5 })(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "1" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(1_000);
-				const response = await presponse;
-				const body = await response.text();
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried once with negative maxRetries",
-				);
-				ctx.assert.strictEqual(
-					body,
-					"ok",
-					"Response body should be from successful retry",
-				);
-			});
-
-			await ctx.test("non-numeric maxRetries", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({
-					// biome-ignore lint/suspicious/noExplicitAny: we want to test invalid options
-					maxRetries: "invalid" as any,
-				})(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "1" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(1_000);
-				const response = await presponse;
-				const body = await response.text();
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried once with non-numeric maxRetries",
-				);
-				ctx.assert.strictEqual(
-					body,
-					"ok",
-					"Response body should be from successful retry",
-				);
-			});
-
-			await ctx.test("NaN maxRetries", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: Number.NaN })(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "1" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(1_000);
-				const response = await presponse;
-				const body = await response.text();
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried once with NaN maxRetries",
-				);
-				ctx.assert.strictEqual(
-					body,
-					"ok",
-					"Response body should be from successful retry",
-				);
-			});
-		});
-
+	describe("strategy controls retry attempts", () => {
 		test("retries when attempts are within the maximum", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(4);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => upto(2, zero()) })(
+				fetchMock,
+			);
 			fetchMock.mock.mockImplementationOnce(
 				async () =>
 					new Response("retry-1", {
@@ -1252,7 +1133,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = withRetryAfter({ maxRetries: 0 })(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => upto(0, zero()) })(
+				fetchMock,
+			);
 			fetchMock.mock.mockImplementationOnce(
 				async () =>
 					new Response("not ok", {
@@ -1293,7 +1176,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 						headers: { "Retry-After": "1" },
 					}),
 			);
-			const qfetch = withRetryAfter({ maxRetries: 1 })(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => upto(1, zero()) })(
+				fetchMock,
+			);
 
 			// Act
 			const presponse = qfetch("http://example.local");
@@ -1329,7 +1214,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			let cancelCalled = false;
 			let cancelReason: string | undefined;
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+				fetchMock,
+			);
 
 			fetchMock.mock.mockImplementationOnce(async () => {
 				const stream = new ReadableStream({
@@ -1372,7 +1259,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+				fetchMock,
+			);
 
 			fetchMock.mock.mockImplementationOnce(async () => {
 				const stream = new ReadableStream({
@@ -1414,14 +1303,15 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+				fetchMock,
+			);
 
 			fetchMock.mock.mockImplementationOnce(async () => {
-				const response = new Response(null, {
+				return new Response(null, {
 					status: 429,
 					headers: { "Retry-After": "1" },
 				});
-				return response;
 			});
 
 			// Act
@@ -1445,200 +1335,49 @@ suite("withRetryAfter middleware - Unit tests", () => {
 		});
 	});
 
-	describe("jitter prevents thundering herd by adding random delay", () => {
-		test("does not add jitter when not configured", async (ctx: TestContext) => {
+	describe("strategy adds backoff delay on top of server delay", () => {
+		test("does not add extra delay with zero strategy", async (ctx: TestContext) => {
 			// Arrange
-			ctx.plan(5);
+			ctx.plan(2);
+			ctx.mock.timers.enable({ apis: ["setTimeout"] });
+			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
+			const qfetch = withRetryAfter({ strategy: () => upto(1, zero()) })(
+				fetchMock,
+			);
+			fetchMock.mock.mockImplementationOnce(
+				async () =>
+					new Response("not ok", {
+						status: 429,
+						headers: { "Retry-After": "10" },
+					}),
+			);
 
-			ctx.beforeEach((ctx: TestContext) => {
-				ctx.mock.timers.enable({ apis: ["setTimeout"] });
-			});
-			ctx.afterEach((ctx: TestContext) => {
-				ctx.mock.timers.reset();
-			});
+			// Act
+			const presponse = qfetch("http://example.local");
+			await flushMicrotasks();
+			ctx.mock.timers.tick(10_000);
+			const response = await presponse;
 
-			await ctx.test("undefined maxJitter", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({ maxRetries: 1 })(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "10" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(10_000);
-				const response = await presponse;
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried after exactly 10 seconds without jitter",
-				);
-				ctx.assert.strictEqual(
-					response.status,
-					200,
-					"Should successfully retry without jitter",
-				);
-			});
-
-			await ctx.test("zero maxJitter", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({
-					maxRetries: 1,
-					maxJitter: 0,
-				})(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "10" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(10_000);
-				const response = await presponse;
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried after exactly 10 seconds with zero maxJitter",
-				);
-				ctx.assert.strictEqual(
-					response.status,
-					200,
-					"Should successfully retry with zero maxJitter",
-				);
-			});
-
-			await ctx.test("negative maxJitter", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({
-					maxRetries: 1,
-					maxJitter: -100,
-				})(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "10" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(10_000);
-				const response = await presponse;
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried after exactly 10 seconds with negative maxJitter",
-				);
-				ctx.assert.strictEqual(
-					response.status,
-					200,
-					"Should successfully retry with negative maxJitter",
-				);
-			});
-
-			await ctx.test("non-numeric maxJitter", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({
-					maxRetries: 1,
-					// biome-ignore lint/suspicious/noExplicitAny: we want to test invalid options
-					maxJitter: "invalid" as any,
-				})(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "10" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(10_000);
-				const response = await presponse;
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried after exactly 10 seconds with non-numeric maxJitter",
-				);
-				ctx.assert.strictEqual(
-					response.status,
-					200,
-					"Should successfully retry with non-numeric maxJitter",
-				);
-			});
-
-			await ctx.test("NaN maxJitter", async (ctx: TestContext) => {
-				// Arrange
-				ctx.plan(2);
-				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = withRetryAfter({
-					maxRetries: 1,
-					maxJitter: Number.NaN,
-				})(fetchMock);
-				fetchMock.mock.mockImplementationOnce(
-					async () =>
-						new Response("not ok", {
-							status: 429,
-							headers: { "Retry-After": "10" },
-						}),
-				);
-
-				// Act
-				const presponse = qfetch("http://example.local");
-				await flushMicrotasks();
-				ctx.mock.timers.tick(10_000);
-				const response = await presponse;
-
-				// Assert
-				ctx.assert.strictEqual(
-					fetchMock.mock.callCount(),
-					2,
-					"Should have retried after exactly 10 seconds with NaN maxJitter",
-				);
-				ctx.assert.strictEqual(
-					response.status,
-					200,
-					"Should successfully retry with NaN maxJitter",
-				);
-			});
+			// Assert
+			ctx.assert.strictEqual(
+				fetchMock.mock.callCount(),
+				2,
+				"Should have retried after exactly server delay with zero strategy",
+			);
+			ctx.assert.strictEqual(
+				response.status,
+				200,
+				"Should successfully retry without extra backoff",
+			);
 		});
 
-		test("does not add jitter when it would exceed INT32_MAX", async (ctx: TestContext) => {
+		test("waits for server delay only when strategy returns zero", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 			const qfetch = withRetryAfter({
-				maxRetries: 1,
-				maxJitter: 10_000, // 10 seconds max jitter
+				strategy: () => upto(1, zero()),
 			})(fetchMock);
 			// Set Retry-After to INT32_MAX - this is at the edge
 			fetchMock.mock.mockImplementationOnce(
@@ -1652,7 +1391,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			// Act
 			const presponse = qfetch("http://example.local");
 			await flushMicrotasks();
-			// Should retry after exactly INT32_MAX without any jitter added
+			// Should retry after exactly INT32_MAX without any extra backoff
 			ctx.mock.timers.tick(2_147_483_647);
 
 			// Assert
@@ -1660,10 +1399,10 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			ctx.assert.strictEqual(
 				fetchMock.mock.callCount(),
 				2,
-				"Should have retried after INT32_MAX without adding jitter",
+				"Should have retried after INT32_MAX without adding extra backoff",
 			);
 
-			// The total delay should be exactly INT32_MAX (no jitter added)
+			// The total delay should be exactly INT32_MAX (no extra backoff)
 			// We verify this by confirming that the retry happened at exactly INT32_MAX
 			ctx.assert.strictEqual(
 				fetchMock.mock.calls[1]?.arguments[0],
@@ -1672,7 +1411,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			);
 		});
 
-		test("adds jitter when configured", async (ctx: TestContext) => {
+		test("adds backoff delay from strategy", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(3);
 
@@ -1683,19 +1422,18 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.mock.timers.reset();
 			});
 
-			await ctx.test("positive maxJitter value", async (ctx: TestContext) => {
+			await ctx.test("constant backoff delay", async (ctx: TestContext) => {
 				// Arrange
 				ctx.plan(2);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 				const qfetch = withRetryAfter({
-					maxRetries: 1,
-					maxJitter: 5_000, // 5 seconds max jitter
+					strategy: () => upto(1, constant(5_000)), // 5 seconds constant backoff
 				})(fetchMock);
 				fetchMock.mock.mockImplementationOnce(
 					async () =>
 						new Response("not ok", {
 							status: 429,
-							headers: { "Retry-After": "10" }, // 10 seconds base delay
+							headers: { "Retry-After": "10" }, // 10 seconds server delay
 						}),
 				);
 
@@ -1708,10 +1446,10 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.assert.strictEqual(
 					fetchMock.mock.callCount(),
 					1,
-					"Should not have retried yet after exactly 10 seconds (jitter not elapsed)",
+					"Should not have retried yet after server delay (backoff not elapsed)",
 				);
 
-				// Act - advance to max possible jitter: min(5000, 10000) = 5000ms
+				// Act - advance by strategy backoff: 5000ms
 				await flushMicrotasks();
 				ctx.mock.timers.tick(5_000);
 				await presponse;
@@ -1720,12 +1458,12 @@ suite("withRetryAfter middleware - Unit tests", () => {
 				ctx.assert.strictEqual(
 					fetchMock.mock.callCount(),
 					2,
-					"Should have retried after Retry-After delay plus jitter (up to 15s total)",
+					"Should have retried after server delay + strategy backoff (15s total)",
 				);
 			});
 
 			await ctx.test(
-				"jitter capped by maxJitter when delay > maxJitter",
+				"backoff delay with fullJitter strategy",
 				async (ctx: TestContext) => {
 					// Arrange
 					ctx.plan(3);
@@ -1733,14 +1471,13 @@ suite("withRetryAfter middleware - Unit tests", () => {
 
 					const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 					const qfetch = withRetryAfter({
-						maxRetries: 1,
-						maxJitter: 3_000, // 3 seconds max jitter
+						strategy: () => upto(1, fullJitter(0, 3_000)), // up to 3 seconds backoff
 					})(fetchMock);
 					fetchMock.mock.mockImplementationOnce(
 						async () =>
 							new Response("not ok", {
 								status: 429,
-								headers: { "Retry-After": "10" }, // 10 seconds base delay
+								headers: { "Retry-After": "10" }, // 10 seconds server delay
 							}),
 					);
 
@@ -1753,24 +1490,24 @@ suite("withRetryAfter middleware - Unit tests", () => {
 					ctx.assert.strictEqual(
 						fetchMock.mock.callCount(),
 						1,
-						"Should not have retried yet after base delay",
+						"Should not have retried yet after server delay",
 					);
 
-					// Act - advance by jitter = min(3000, 10000 * 0.5) = 3000ms
+					// Act - advance by strategy backoff = random(0, min(3000, ∞)) with Math.random()=0.5 = 1500ms
 					await flushMicrotasks();
-					ctx.mock.timers.tick(3_000);
+					ctx.mock.timers.tick(1_500);
 					const response = await presponse;
 
 					// Assert
 					ctx.assert.strictEqual(
 						fetchMock.mock.callCount(),
 						2,
-						"Should have retried after base + jitter",
+						"Should have retried after server delay + strategy backoff",
 					);
 					ctx.assert.strictEqual(
 						response.status,
 						200,
-						"Should successfully retry with maxJitter-capped jitter",
+						"Should successfully retry with fullJitter strategy",
 					);
 
 					// cleanup
@@ -1779,7 +1516,7 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			);
 
 			await ctx.test(
-				"jitter capped by delay when delay < maxJitter",
+				"backoff delay with smaller fullJitter cap",
 				async (ctx: TestContext) => {
 					// Arrange
 					ctx.plan(3);
@@ -1787,14 +1524,13 @@ suite("withRetryAfter middleware - Unit tests", () => {
 
 					const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
 					const qfetch = withRetryAfter({
-						maxRetries: 1,
-						maxJitter: 10_000, // 10 seconds max jitter
+						strategy: () => upto(1, fullJitter(0, 2_000)), // up to 2 seconds backoff
 					})(fetchMock);
 					fetchMock.mock.mockImplementationOnce(
 						async () =>
 							new Response("not ok", {
 								status: 429,
-								headers: { "Retry-After": "2" }, // 2 seconds base delay
+								headers: { "Retry-After": "2" }, // 2 seconds server delay
 							}),
 					);
 
@@ -1807,10 +1543,10 @@ suite("withRetryAfter middleware - Unit tests", () => {
 					ctx.assert.strictEqual(
 						fetchMock.mock.callCount(),
 						1,
-						"Should not have retried yet after base delay",
+						"Should not have retried yet after server delay",
 					);
 
-					// Act - advance by jitter = min(10000, 2000 * 0.5) = 1000ms
+					// Act - advance by strategy backoff = random(0, min(2000, ∞)) with Math.random()=0.5 = 1000ms
 					await flushMicrotasks();
 					ctx.mock.timers.tick(1_000);
 					const response = await presponse;
@@ -1819,12 +1555,12 @@ suite("withRetryAfter middleware - Unit tests", () => {
 					ctx.assert.strictEqual(
 						fetchMock.mock.callCount(),
 						2,
-						"Should have retried after base + jitter",
+						"Should have retried after server delay + strategy backoff",
 					);
 					ctx.assert.strictEqual(
 						response.status,
 						200,
-						"Should successfully retry with delay-capped jitter",
+						"Should successfully retry with fullJitter strategy",
 					);
 
 					// cleanup
@@ -1841,7 +1577,9 @@ suite("withRetryAfter middleware - Unit tests", () => {
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 			const controller = new AbortController();
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = withRetryAfter({ maxRetries: 3 })(fetchMock);
+			const qfetch = withRetryAfter({ strategy: () => upto(3, zero()) })(
+				fetchMock,
+			);
 			fetchMock.mock.mockImplementationOnce(
 				async () =>
 					new Response("not ok", {
