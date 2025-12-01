@@ -31,6 +31,16 @@ export type RetryAfterOptions = {
 	 * @default undefined (unlimited)
 	 */
 	maxServerDelay?: number;
+
+	/**
+	 * Set of HTTP status codes that should trigger automatic retries.
+	 *
+	 * Defaults to the standard retryable status codes: `429`, `503`.
+	 * Override this to customize which status codes should be retried.
+	 *
+	 * @default new Set([429, 503])
+	 */
+	retryableStatuses?: ReadonlySet<number>;
 };
 
 /**
@@ -71,8 +81,7 @@ export const withRetryAfter: Middleware<RetryAfterOptions> = (opts) => {
 
 	// Get the set of retryable status codes, defaulting to the standard set
 	const retryableStatuses =
-		// opts.retryableStatuses ?? DEFAULT_RETRYABLE_STATUSES;
-		DEFAULT_RETRYABLE_STATUSES;
+		opts.retryableStatuses ?? DEFAULT_RETRYABLE_STATUSES;
 
 	return (next) => async (input, init) => {
 		// Extract the signal for this request
