@@ -4,78 +4,64 @@ import type { Middleware } from "@qfetch/core";
 /**
  * Configuration options for the {@link withRetryAfter} middleware.
  *
- * @example
- * ```ts
- * import { fullJitter, upto } from "@proventuslabs/retry-strategies";
- *
- * {
- *   strategy: () => upto(3, fullJitter(100, 10_000)),
- *   maxServerDelay: 120_000
- * }
- * ```
+ * Controls retry behavior for requests with `429` or `503` responses that include a `Retry-After` header.
  */
 export type RetryAfterOptions = {
 	/**
-	 * Maximum delay in milliseconds accepted form the server for a single retry.
-	 * - `0` = only instant retries
-	 * - `>= 1` = ceiling on delay
-	 * - Negative/NaN/undefined = unlimited
-	 *
-	 * @default undefined
-	 */
-	maxServerDelay?: number;
-
-	/**
 	 * Factory function that creates a backoff strategy for retry delays.
 	 *
-	 * The strategy determines how long to wait between retry attempts and when to stop
-	 * retrying (by returning `NaN`). A new strategy instance is created for each request
-	 * chain to ensure independent retry timing.
-	 *
-	 * To limit the number of retries, wrap the strategy with the `upto()` function from
-	 * `@proventuslabs/retry-strategies`:
+	 * The strategy determines additional jitter to add to the `Retry-After` delay and when to stop
+	 * retrying (by returning `NaN`). Total wait time is `Retry-After + strategy.nextBackoff()`.
+	 * Wrap with `upto()` to limit retry attempts.
 	 *
 	 * @example
-	 * ```ts
+	 * ```typescript
 	 * import { fullJitter, upto } from "@proventuslabs/retry-strategies";
 	 *
-	 * // Limit to 3 retries adding full-jitter to the server delay
 	 * strategy: () => upto(3, fullJitter(100, 10_000))
 	 * ```
 	 */
 	strategy: () => BackoffStrategy;
+
+	/**
+	 * Maximum delay in milliseconds accepted from the server for a single retry.
+	 *
+	 * Enforces a ceiling on the `Retry-After` delay. Throws `ConstraintError` if exceeded.
+	 *
+	 * @default undefined (unlimited)
+	 */
+	maxServerDelay?: number;
 };
 
 /**
- * Automatically retries requests on `429` and `503` responses with valid `Retry-After` headers.
+ * Middleware that automatically retries HTTP requests based on server-provided `Retry-After` headers.
  *
- * **Behavior:**
- * - Success (2xx): passed through immediately
- * - Missing/invalid `Retry-After`: no retry, response returned as-is
- * - Numeric values: delay-seconds
- * - HTTP-date values: absolute future time, past dates are zero-delay
- * - Throws `ConstraintError` when delay exceeds `maxServerDelay` or `INT32_MAX` (~24.8 days)
- * - Returns last response when strategy exhausted (no throw)
+ * Retries requests that fail with `429 Too Many Requests` or `503 Service Unavailable` status codes
+ * when a valid `Retry-After` header is present. Supports both delay-seconds (`"120"`) and HTTP-date
+ * formats (`"Wed, 21 Oct 2015 07:28:00 GMT"`) per [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
  *
- * **Streaming bodies:** Cannot be retried per Fetch spec. Use a body factory middleware downstream.
+ * The middleware waits for the server-requested delay plus optional strategy backoff, then retries
+ * the request. Use the strategy to add jitter and control retry limits (strategy returns `NaN` to stop).
+ * Responses without `Retry-After` headers or with invalid values are returned immediately without retrying.
  *
- * **Cancellation:** Honors `AbortSignal` during retry waits and request execution. Aborting the signal
- * immediately cancels pending retries and throws `AbortError`.
+ * @param opts - Configuration parameters. See {@link RetryAfterOptions} for details.
  *
- * @throws {DOMException} `ConstraintError` when the server delay exceeds `maxServerDelay`
- * @throws {unknown} The reason of the AbortSignal if the operation is aborted (generally {@link DOMException} `AbortError`).
- * @throws {RangeError} If the total delay exceeds INT32_MAX (2147483647ms, approximately 24.8 days).
+ * @throws {DOMException} `ConstraintError` when server delay exceeds `maxServerDelay`.
+ * @throws {unknown} If the request's `AbortSignal` is aborted during retry delay.
+ * @throws {RangeError} If total delay exceeds INT32_MAX (2147483647ms).
+ *
  * @example
  * ```ts
+ * import { withRetryAfter } from "@qfetch/middleware-retry-after";
  * import { fullJitter, upto } from "@proventuslabs/retry-strategies";
  *
  * const qfetch = withRetryAfter({
- *   strategy: () => upto(3, fullJitter(100, 10_000))
+ *   strategy: () => upto(3, fullJitter(100, 10_000)),
+ *   maxServerDelay: 120_000 // 2 minutes max
  * })(fetch);
+ *
+ * const response = await qfetch("https://api.example.com/data");
  * ```
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
- * @see {@link https://www.rfc-editor.org/rfc/rfc6585.html#section-4 RFC 6585 §4 — 429 Too Many Requests}
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.4 RFC 9110 §15.6.4 — 503 Service Unavailable}
  */
 export const withRetryAfter: Middleware<RetryAfterOptions> = (opts) => {
 	const maxServerDelay =
@@ -146,53 +132,44 @@ export const withRetryAfter: Middleware<RetryAfterOptions> = (opts) => {
 export const CANCEL_REASON = "Retry scheduled";
 
 /**
- * Regular expression matching a `Retry-After` header value expressed as
- * *delta-seconds*.
+ * Regular expression matching `Retry-After` delay-seconds format (e.g., `"120"`).
  *
- * @example "120"
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3}
  */
 const DELTA_SECONDS = /^\d+$/;
 
 /**
- * Regular expression matching a `Retry-After` header value expressed as an
- * *HTTP-date*, in the IMF-fixdate format.
+ * Regular expression matching `Retry-After` HTTP-date format (e.g., `"Wed, 21 Oct 2015 07:28:00 GMT"`).
  *
- * @example "Wed, 21 Oct 2015 07:28:00 GMT"
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-5.6.7 RFC 9110 §5.6.7 — Date/Time Formats}
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3}
  */
 const HTTP_DATE =
 	/^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
 
 /**
- * HTTP status codes that indicate a retryable condition.
- * - `429`: Too Many Requests
- * - `503`: Service Unavailable
+ * HTTP status codes that indicate retryable conditions: `429` and `503`.
  *
- * @see {@link https://www.rfc-editor.org/rfc/rfc6585.html#section-4 RFC 6585 §4 — 429 Too Many Requests}
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.4 RFC 9110 §15.6.4 — 503 Service Unavailable}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc6585.html#section-4 RFC 6585 §4}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.4 RFC 9110 §15.6.4}
  */
 const DEFAULT_RETRYABLE_STATUSES: ReadonlySet<number> = new Set([429, 503]);
 
 /**
- * The `Retry-After` header name.
+ * The `Retry-After` HTTP response header name.
  *
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3}
  */
 const RETRY_AFTER_HEADER = "Retry-After";
 
 /**
- * Parses a `Retry-After` header.
+ * Parses a `Retry-After` header value to milliseconds.
  *
- * - If the value is an integer, it is interpreted as a delay in seconds since the parsing.
- * - If the value is an HTTP-date, it is interpreted as the difference
- *   between that time and the current time.
- * - Invalid values return `null`.
+ * Supports delay-seconds (`"120"`) and HTTP-date (`"Wed, 21 Oct 2015 07:28:00 GMT"`) formats.
+ * Past dates return zero delay. Invalid values return `null`.
  *
- * @param value - The raw `Retry-After` header value.
- * @returns The delay duration in milliseconds, or `null` if invalid.
- * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 — Retry-After}
+ * @param value - The raw `Retry-After` header value, or `null` if missing.
+ * @returns Delay in milliseconds, or `null` if invalid or missing.
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3}
  */
 const parseRetryAfter = (value: string | null): null | number => {
 	if (value === null) return null;

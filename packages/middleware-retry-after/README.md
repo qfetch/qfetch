@@ -1,10 +1,12 @@
 # @qfetch/middleware-retry-after
 
-Fetch middleware that automatically retries requests based on the `Retry-After` header.
+Fetch middleware that automatically retries requests based on server-provided `Retry-After` headers with configurable backoff strategies.
 
 ## Overview
 
-Implements automatic retry logic following [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3) and [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585.html#section-4) semantics for `429 (Too Many Requests)` and `503 (Service Unavailable)` responses. When the server responds with these status codes and a valid `Retry-After` header, this middleware will automatically wait and retry the request according to the server's guidance.
+Implements automatic retry logic following [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3) and [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585.html#section-4) semantics for `429 (Too Many Requests)` and `503 (Service Unavailable)` responses. When the server responds with these status codes and a valid `Retry-After` header, this middleware automatically parses the delay value and retries the request.
+
+The middleware uses configurable backoff strategies from [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies) to add optional jitter to server-requested delays and control retry limits. The total wait time is the sum of the server's `Retry-After` delay plus the strategy's backoff value.
 
 Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
@@ -21,138 +23,104 @@ Intended for use with the composable middleware system provided by [`@qfetch/cor
 ## Installation
 
 ```bash
-npm install @qfetch/middleware-retry-after
+npm install @qfetch/middleware-retry-after @proventuslabs/retry-strategies
 ```
 
 ## API
 
-### `withRetryAfter(options?)`
+### `withRetryAfter(options)`
 
 Creates a middleware that retries failed requests based on the `Retry-After` header.
 
 #### Options
 
-- `maxRetries?: number` - Maximum number of retry attempts (default: unlimited)
-  - `0` means no retries at all (fail immediately on first error)
-  - Positive integers limit the number of retry attempts
-  - Negative or non-numeric values mean unlimited retries
-- `maxDelayTime?: number` - Maximum delay in milliseconds for a single retry (default: unlimited)
-  - `0` means retry only instant requests (delay must be 0ms, otherwise abort)
-  - Positive integers set a ceiling on retry delay duration
-  - Negative or non-numeric values mean unlimited delay
+- `strategy: () => BackoffStrategy` **(required)** - Factory function that creates a backoff strategy for retry delays
+  - The strategy determines additional delay (jitter) to add to the server-requested `Retry-After` delay
+  - Controls when to stop retrying by returning `NaN`
+  - Total wait time = `Retry-After` value + strategy backoff value
+  - A new strategy instance is created for each request chain
+  - Use `upto()` wrapper from `@proventuslabs/retry-strategies` to limit retry attempts
+  - Common strategies: `zero()` (no jitter), `fullJitter()`, `linear()`, `exponential()`
+- `maxServerDelay?: number` - Maximum delay in milliseconds accepted from the server for a single retry (default: unlimited)
+  - `0` means only allow instant retries (zero delay)
+  - Positive integers set a ceiling on the server's requested delay
+  - Negative or `NaN` values mean unlimited delay
   - If the server's `Retry-After` value exceeds this, a `ConstraintError` is thrown
-- `maxJitter?: number` - Maximum random jitter using full-jitter strategy (default: no jitter)
-  - `0` means no jitter (deterministic retry timing)
-  - Positive integers set the jitter cap
-  - Negative or non-numeric values mean no jitter
 
 #### Behavior
 
 - **Successful responses** (status 2xx) are returned immediately, even with a `Retry-After` header
-- **Retryable statuses** (`429` or `503`) trigger retry logic when a valid `Retry-After` header is present
-- **Retry-After parsing**:
-  - Numeric values are interpreted as seconds (only non-negative integers)
-  - Date values are interpreted as absolute future time (only HTTP-date IMF-fixdate format)
+- **Retryable statuses** - Only `429 Too Many Requests` or `503 Service Unavailable` trigger retry logic when a valid `Retry-After` header is present
+- **Retry-After parsing** - Supports both formats specified in RFC 9110:
+  - **Delay-seconds**: Integer values are interpreted as seconds to wait (e.g., `"120"`)
+  - **HTTP-date**: IMF-fixdate timestamps are interpreted as absolute retry time (e.g., `"Wed, 21 Oct 2015 07:28:00 GMT"`)
   - Past dates result in zero-delay retry (immediate retry)
-  - Invalid or missing headers prevent retries (no error thrown, response returned as-is)
-- **Full-jitter strategy**:
-  - When `maxJitter` is configured, uses full-jitter: `delay + random(0, min(maxJitter, delay))`
-  - Prevents thundering herd by spreading retries across a time window
-  - Jitter automatically scales with the base delay (shorter delays = less jitter, longer delays = more jitter up to cap)
-  - Always respects the minimum delay specified by the server
+  - Invalid or missing headers prevent retries (response returned as-is, no error thrown)
+  - Values exceeding safe integer range are treated as invalid
+- **Backoff strategy**:
+  - The strategy determines additional delay (jitter) to add to the server's requested delay
+  - Total wait time = `Retry-After` value + strategy backoff value
+  - Strategy controls when to stop retrying by returning `NaN`
+  - Use `upto()` wrapper to limit the number of retry attempts
+  - Common strategies include `zero()` (no jitter), `fullJitter()`, `linear()`, and `exponential()`
+- **Request body cleanup**:
+  - Automatically cancels the response body stream before retrying to prevent memory leaks
+  - This is a best-effort operation that won't block retries if cancellation fails
 - **Error handling**:
-  - Exceeding `maxDelayTime` throws a `DOMException` with name `"ConstraintError"` (checked before jitter is applied)
-  - Exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) throws a `DOMException` with name `"ConstraintError"` to prevent `setTimeout` overflow behavior where excessively large delays wrap around to immediate execution (checked before jitter is applied)
-  - Exceeding `maxRetries` returns the last response without retrying (no error thrown)
+  - Exceeding `maxServerDelay` throws a `DOMException` with name `"ConstraintError"`
+  - Exceeding INT32_MAX (2,147,483,647 milliseconds or ~24.8 days) for total delay throws a `RangeError`
+  - When the strategy returns `NaN`, retrying stops and the last response is returned (no error thrown)
 - **Cancellation support**:
   - Respects `AbortSignal` passed via request options or `Request` object
-  - Cancellation during retry wait period immediately aborts with `AbortError`
+  - Cancellation during retry wait period immediately aborts and throws the abort reason
   - Cancellation during retry request execution propagates the abort signal to the fetch call
 
 ## Usage
 
-### Basic usage with unlimited retries
+### Basic usage (respect server delay exactly)
 
 ```typescript
 import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { compose } from '@qfetch/core';
+import { zero } from '@proventuslabs/retry-strategies';
 
-const qfetch = compose(
-  withRetryAfter()
-)(fetch);
+const qfetch = withRetryAfter({
+  strategy: () => zero() // No jitter, respect server delay exactly
+})(fetch);
 
-// Automatically retries indefinitely on 429 or 503 with Retry-After header
 const response = await qfetch('https://api.example.com/data');
 ```
 
-### With retry limit
+### With limited retries
 
 ```typescript
 import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { compose } from '@qfetch/core';
+import { upto, zero } from '@proventuslabs/retry-strategies';
 
-const qfetch = compose(
-  withRetryAfter({ maxRetries: 3 })
-)(fetch);
+const qfetch = withRetryAfter({
+  strategy: () => upto(3, zero()) // Maximum 3 retries
+})(fetch);
 
-// Automatically retries up to 3 times on 429 or 503 with Retry-After header
 const response = await qfetch('https://api.example.com/data');
 ```
 
-### With maximum retry delay ceiling
+### With jitter (recommended to prevent thundering herd)
 
 ```typescript
 import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { compose } from '@qfetch/core';
+import { fullJitter, upto } from '@proventuslabs/retry-strategies';
 
-const qfetch = compose(
-  withRetryAfter({
-    maxRetries: 5,
-    maxDelayTime: 60_000 // 60 seconds max delay
-  })
-)(fetch);
+const qfetch = withRetryAfter({
+  strategy: () => upto(3, fullJitter(100, 10_000))
+})(fetch);
 
-// Throws ConstraintError if server requests delay > 60 seconds
 const response = await qfetch('https://api.example.com/data');
-```
-
-### With full-jitter to prevent thundering herd
-
-```typescript
-import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { compose } from '@qfetch/core';
-
-const qfetch = compose(
-  withRetryAfter({
-    maxRetries: 5,
-    maxJitter: 5_000 // Cap jitter at 5 seconds
-  })
-)(fetch);
-
-// Full-jitter examples:
-// - Retry-After: 10s  → actual delay: 10s + random(0, 5s)   = 10-15s
-// - Retry-After: 2s   → actual delay: 2s + random(0, 2s)    = 2-4s
-// - Retry-After: 120s → actual delay: 120s + random(0, 5s)  = 120-125s
-//
-// This spreads retry attempts across a time window, preventing thundering herd
-const response = await qfetch('https://api.example.com/data');
-```
-
-### Composing with other middlewares
-
-```typescript
-import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { compose } from '@qfetch/core';
-
-const qfetch = compose(
-	// other middlewares...
-  withRetryAfter({ maxRetries: 3 }),
-)(fetch);
-
-await qfetch('https://api.example.com/data');
 ```
 
 ## Notes
 
 - Requests are retried with the exact same parameters (URL, method, headers, body, etc.)
-- The middleware always schedules a microtask before retrying
+- Response bodies are automatically cancelled before retrying to prevent memory leaks
+- The middleware only retries on `429` and `503` status codes with valid `Retry-After` headers
+- Use the `zero()` strategy to respect server delays exactly without adding jitter
+- Use the `upto()` wrapper to limit the number of retry attempts
+- See [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies) for available backoff strategies
