@@ -46,9 +46,10 @@ export type RetryAfterOptions = {
 /**
  * Middleware that automatically retries HTTP requests based on server-provided `Retry-After` headers.
  *
- * Retries requests that fail with `429 Too Many Requests` or `503 Service Unavailable` status codes
- * when a valid `Retry-After` header is present. Supports both delay-seconds (`"120"`) and HTTP-date
- * formats (`"Wed, 21 Oct 2015 07:28:00 GMT"`) per [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
+ * Retries requests that fail with specific HTTP status codes (by default `429 Too Many Requests` or
+ * `503 Service Unavailable`) when a valid `Retry-After` header is present. Supports both delay-seconds
+ * (`"120"`) and HTTP-date formats (`"Wed, 21 Oct 2015 07:28:00 GMT"`) per
+ * [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
  *
  * The middleware waits for the server-requested delay plus optional strategy backoff, then retries
  * the request. Use the strategy to add jitter and control retry limits (strategy returns `NaN` to stop).
