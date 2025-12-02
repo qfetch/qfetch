@@ -48,6 +48,22 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  packages/middleware-retry-after:
+    dependencies:
+      '@proventuslabs/retry-strategies':
+        specifier: ^0.1
+        version: 0.1.2
+    devDependencies:
+      '@qfetch/core':
+        specifier: 'workspace:'
+        version: link:../core
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.15.12(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
 packages:
 
   '@babel/code-frame@7.27.1':
@@ -187,6 +203,9 @@ packages:
 
   '@oxc-project/types@0.95.0':
     resolution: {integrity: sha512-vACy7vhpMPhjEJhULNxrdR0D943TkA/MigMpJCHmBHvMXxRStRi/dPtTlfQ3uDwWSzRpT8z+7ImjZVf8JWBocQ==}
+
+  '@proventuslabs/retry-strategies@0.1.2':
+    resolution: {integrity: sha512-RPZz3sGmXfr2zrlEve696wnr6ZSNujQrWx/stdBgz3Rcz7ec/jgSmWuTF2gCXcnu/s5IomzY2+daIoyVe9EjpA==}
 
   '@quansync/fs@0.1.5':
     resolution: {integrity: sha512-lNS9hL2aS2NZgNW7BBj+6EBl4rOf8l+tQ0eRY6JWCI8jI2kc53gSoqbjojU0OnAWhzoXiOjFyGsHcDGePB3lhA==}
@@ -1656,6 +1675,8 @@ snapshots:
       fastq: 1.19.1
 
   '@oxc-project/types@0.95.0': {}
+
+  '@proventuslabs/retry-strategies@0.1.2': {}
 
   '@quansync/fs@0.1.5':
     dependencies:
