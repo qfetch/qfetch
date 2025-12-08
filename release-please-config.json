@@ -21,7 +21,7 @@
 			"extra-files": [
 				{
 					"type": "json",
-					"path": "packages/middleware-retry-after/jsr.json",
+					"path": "jsr.json",
 					"jsonpath": "$.version"
 				}
 			]
