@@ -111,8 +111,7 @@ export const withRetryAfter: Middleware<RetryAfterOptions> = (opts) => {
 			// When the strategy says we should stop, passthrough the response
 			if (Number.isNaN(delay)) break;
 
-			// Consume the previous response body in case of retry - it is done before throws so that
-			// we guarantee that the body is canceled in case of any error
+			// Consume the previous response body in case of retry
 			await response.body?.cancel(CANCEL_REASON).catch(() => {
 				// Note: If cancellation fails, the response body may remain in memory until garbage collected,
 				// potentially consuming resources. However, this is a best-effort cleanup that shouldn't block retries.
