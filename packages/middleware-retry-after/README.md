@@ -46,11 +46,16 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
   - Positive integers set a ceiling on the server's requested delay
   - Negative or `NaN` values mean unlimited delay
   - If the server's `Retry-After` value exceeds this, a `ConstraintError` is thrown
+- `retryableStatuses?: ReadonlySet<number>` - Set of HTTP status codes that trigger automatic retries (default: `new Set([429, 503])`)
+  - Only responses with these status codes and a valid `Retry-After` header will be retried
+  - Override to customize which status codes should trigger retry behavior
+  - Common additional codes: `502` (Bad Gateway), `503` (Service Unavailable), `504` (Gateway Timeout)
+  - Use an empty set (`new Set()`) to disable all automatic retries
 
 #### Behavior
 
 - **Successful responses** (status 2xx) are returned immediately, even with a `Retry-After` header
-- **Retryable statuses** - Only `429 Too Many Requests` or `503 Service Unavailable` trigger retry logic when a valid `Retry-After` header is present
+- **Retryable statuses** - By default, only `429 Too Many Requests` or `503 Service Unavailable` trigger retry logic when a valid `Retry-After` header is present. This can be customized using the `retryableStatuses` option
 - **Retry-After parsing** - Supports both formats specified in RFC 9110:
   - **Delay-seconds**: Integer values are interpreted as seconds to wait (e.g., `"120"`)
   - **HTTP-date**: IMF-fixdate timestamps are interpreted as absolute retry time (e.g., `"Wed, 21 Oct 2015 07:28:00 GMT"`)
@@ -116,11 +121,40 @@ const qfetch = withRetryAfter({
 const response = await qfetch('https://api.example.com/data');
 ```
 
+### With custom retryable status codes
+
+```typescript
+import { withRetryAfter } from '@qfetch/middleware-retry-after';
+import { fullJitter, upto } from '@proventuslabs/retry-strategies';
+
+// Retry on 429 (Too Many Requests), 502 (Bad Gateway), and 520 (Cloudflare Unknown Error)
+const qfetch = withRetryAfter({
+  strategy: () => upto(3, fullJitter(100, 10_000)),
+  retryableStatuses: new Set([429, 502, 520])
+})(fetch);
+
+const response = await qfetch('https://api.example.com/data');
+```
+
+### With maximum server delay constraint
+
+```typescript
+import { withRetryAfter } from '@qfetch/middleware-retry-after';
+import { fullJitter, upto } from '@proventuslabs/retry-strategies';
+
+const qfetch = withRetryAfter({
+  strategy: () => upto(3, fullJitter(100, 10_000)),
+  maxServerDelay: 120_000 // Maximum 2 minutes delay
+})(fetch);
+
+const response = await qfetch('https://api.example.com/data');
+```
+
 ## Notes
 
 - Requests are retried with the exact same parameters (URL, method, headers, body, etc.)
 - Response bodies are automatically cancelled before retrying to prevent memory leaks
-- The middleware only retries on `429` and `503` status codes with valid `Retry-After` headers
+- By default, the middleware only retries on `429` and `503` status codes with valid `Retry-After` headers (customizable via `retryableStatuses` option)
 - Use the `zero()` strategy to respect server delays exactly without adding jitter
 - Use the `upto()` wrapper to limit the number of retry attempts
 - See [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies) for available backoff strategies

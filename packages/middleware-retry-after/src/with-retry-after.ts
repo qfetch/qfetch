@@ -56,12 +56,15 @@ export type RetryAfterOptions = {
  * Responses without `Retry-After` headers or with invalid values are returned immediately without retrying.
  *
  * @param opts - Configuration parameters. See {@link RetryAfterOptions} for details.
+ * @param opts.strategy - Factory function creating a backoff strategy for retry delays.
+ * @param opts.maxServerDelay - Maximum delay in milliseconds accepted from server (default: unlimited).
+ * @param opts.retryableStatuses - Set of HTTP status codes that trigger retries (default: `429`, `503`).
  *
  * @throws {DOMException} `ConstraintError` when server delay exceeds `maxServerDelay`.
  * @throws {unknown} If the request's `AbortSignal` is aborted during retry delay.
  * @throws {RangeError} If total delay exceeds INT32_MAX (2147483647ms).
  *
- * @example
+ * @example Basic usage with default retryable statuses (429, 503)
  * ```ts
  * import { withRetryAfter } from "@qfetch/middleware-retry-after";
  * import { fullJitter, upto } from "@proventuslabs/retry-strategies";
@@ -69,6 +72,20 @@ export type RetryAfterOptions = {
  * const qfetch = withRetryAfter({
  *   strategy: () => upto(3, fullJitter(100, 10_000)),
  *   maxServerDelay: 120_000 // 2 minutes max
+ * })(fetch);
+ *
+ * const response = await qfetch("https://api.example.com/data");
+ * ```
+ *
+ * @example Custom retryable status codes
+ * ```ts
+ * import { withRetryAfter } from "@qfetch/middleware-retry-after";
+ * import { fullJitter, upto } from "@proventuslabs/retry-strategies";
+ *
+ * // Retry on 429, 502 (Bad Gateway), and 520 (Cloudflare Unknown Error)
+ * const qfetch = withRetryAfter({
+ *   strategy: () => upto(3, fullJitter(100, 10_000)),
+ *   retryableStatuses: new Set([429, 502, 520])
  * })(fetch);
  *
  * const response = await qfetch("https://api.example.com/data");
@@ -184,8 +201,8 @@ const parseRetryAfter = (value: string | null): null | number => {
 	if (value === null) return null;
 
 	if (DELTA_SECONDS.test(value)) {
-		const seconds = new Number(value);
-		const milliseconds = seconds.valueOf() * 1000;
+		const seconds = Number(value);
+		const milliseconds = seconds * 1000;
 		return Number.isSafeInteger(milliseconds) ? milliseconds : null;
 	}
 
