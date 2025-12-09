@@ -87,7 +87,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("retry with 429 status code", () => {
-		test("retries after delay when Retry-After header is present", async (ctx: TestContext) => {
+		test("waits for server-specified delay before retrying", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -190,7 +190,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("retry with 503 status code", () => {
-		test("retries after delay when Retry-After header is present", async (ctx: TestContext) => {
+		test("waits for server-specified delay before retrying", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -224,7 +224,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("HTTP-date format", () => {
-		test("retries when Retry-After is HTTP-date", async (ctx: TestContext) => {
+		test("waits until server-specified date before retrying", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -265,7 +265,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("INT32_MAX boundary tests", () => {
-		test("throws RangeError when delay exceeds INT32_MAX", async (ctx: TestContext) => {
+		test("rejects with range error when delay exceeds INT32_MAX", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -295,7 +295,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("maxServerDelay enforcement", () => {
-		test("throws when delay exceeds maxServerDelay", async (ctx: TestContext) => {
+		test("rejects with constraint error when delay exceeds maximum", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -321,7 +321,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 			);
 		});
 
-		test("retries when delay is within maxServerDelay", async (ctx: TestContext) => {
+		test("proceeds with retry when delay is within maximum", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -358,7 +358,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("retry limit enforcement", () => {
-		test("stops retrying after max retries exhausted", async (ctx: TestContext) => {
+		test("returns last response when retry attempts exhausted", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -391,7 +391,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("zero delay", () => {
-		test("retries immediately when Retry-After is 0", async (ctx: TestContext) => {
+		test("proceeds without delay when server requests immediate retry", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -477,7 +477,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("past HTTP-date handling", () => {
-		test("retries immediately when HTTP-date is in the past", async (ctx: TestContext) => {
+		test("proceeds without delay when server-specified date has passed", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -571,7 +571,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 	});
 
 	describe("backoff strategy integration", () => {
-		test("applies additional backoff delay from strategy", async (ctx: TestContext) => {
+		test("adds strategy backoff to server-specified delay", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(3);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
@@ -620,7 +620,7 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 			);
 		});
 
-		test("retries with server delay only when strategy adds no delay", async (ctx: TestContext) => {
+		test("waits for server delay only when strategy provides no backoff", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
