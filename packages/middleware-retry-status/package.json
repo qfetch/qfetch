@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-retry-status",
-	"description": "Fetch middleware for automatic retry on transient HTTP errors (408, 429, 500, 502, 503, 504) with configurable backoff strategies",
+	"description": "Fetch middleware for RFC 9110-compliant status code retry handling.",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
@@ -24,13 +24,14 @@
 	"keywords": [
 		"backoff",
 		"composable",
-		"error-handling",
 		"fetch",
 		"http",
 		"middleware",
-		"resilience",
 		"retry",
-		"transient-errors"
+		"rfc9110",
+		"status-code",
+		"transient-errors",
+		"typescript"
 	],
 	"license": "MIT",
 	"main": "./dist/index.cjs",
