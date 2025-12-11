@@ -22,17 +22,21 @@ npm install @qfetch/middleware-base-url
 
 Creates a middleware that resolves request URLs against the given base URL.
 
-#### Parameters
+#### Options
 
-- `options` (`BaseUrlOptions`): The base URL as a string or `URL` instance
+- Base URL (`string | URL`) **(required)** - The base URL to resolve requests against
+  - Accepts either a string or URL instance
+  - Must be a valid URL (throws `TypeError` if invalid)
+  - Trailing slash recommended for predictable path resolution
+  - Example: `"https://api.example.com/v1/"` or `new URL("https://api.example.com/v1/")`
 
-#### Returns
+#### Behavior
 
-A middleware function compatible with `@qfetch/core`.
-
-#### Throws
-
-- `TypeError` - When the provided base URL is invalid
+- **Same-origin requests** - All paths (including those starting with `/`) are treated as relative and resolved against the base path
+- **Different-origin requests** - Passed through unchanged (cross-origin requests remain intact)
+- **Type preservation** - Input types are preserved (string→string, URL→URL, Request→Request)
+- **Query parameters and fragments** - Always preserved during URL resolution
+- **Request properties** - Method, headers, body, and other properties are preserved when reconstructing Request objects
 
 ### URL Resolution Behavior
 
@@ -138,10 +142,21 @@ const crossOriginRequest = new Request('https://external.com/webhook', {
 await qfetch(crossOriginRequest); // → https://external.com/webhook
 ```
 
-## Limitations
+## Important Limitations
 
-* `Request` objects are reconstructed with new URLs rather than mutated (the API is immutable)
-* Request body streams are preserved but not cloned (body remains consumable once)
+> **Request Object Reconstruction**
+> `Request` objects are immutable according to the Fetch API specification. When resolving same-origin requests, new `Request` objects are created with the resolved URL. All request properties (method, headers, body, etc.) are preserved during reconstruction.
+
+> **Request Body Handling**
+> Request body streams are preserved but not cloned. The body remains consumable exactly once. For requests with non-replayable body types (like `ReadableStream`), the body will be consumed during the first attempt and cannot be retried without providing a fresh body stream.
+
+## Notes
+
+- The middleware preserves input types (string→string, URL→URL, Request→Request) throughout the middleware chain
+- Same-origin detection is based on URL origin comparison (protocol + host + port)
+- Query parameters and URL fragments are always preserved during resolution
+- Different-origin requests bypass base URL resolution entirely
+- A trailing slash (`/`) at the end of the base URL is recommended for predictable path resolution
 
 ## Standards References
 

@@ -1,47 +1,80 @@
 import type { Middleware } from "@qfetch/core";
 
 /**
- * Base URL for resolving relative request paths (string or URL instance).
+ * Configuration options for the {@link withBaseUrl} middleware.
+ *
+ * Accepts a base URL as either a string or URL instance.
  *
  * @remarks
- * Trailing slash recommended: `"https://api.example.com/v1/"` appends paths,
- * while `"https://api.example.com/v1"` replaces the last segment.
+ * **Trailing slash recommended:** Using `"https://api.example.com/v1/"` (with trailing slash)
+ * appends paths as expected, while `"https://api.example.com/v1"` (without trailing slash)
+ * replaces the last path segment following standard URL resolution behavior.
  *
- * @see https://url.spec.whatwg.org/
+ * @see {@link https://url.spec.whatwg.org/ WHATWG URL Standard}
  */
 export type BaseUrlOptions = string | URL;
 
 /**
- * Resolves fetch requests against a base URL with consistent same-origin handling.
+ * Middleware that resolves fetch requests against a configured base URL with consistent same-origin handling.
  *
- * **Same-origin requests:** All paths (even those starting with `/`) are treated
- * as relative and resolved against the base path. This ensures consistent behavior
- * across string, URL, and Request inputs.
+ * Automatically resolves request URLs against a configured base URL. All same-origin requests
+ * (even those with absolute paths like `/users`) are treated as relative to the base path,
+ * while different-origin requests pass through unchanged. This utility-first approach provides
+ * more intuitive and consistent behavior than strict WHATWG URL Standard resolution.
  *
- * **Different-origin requests:** Passed through unchanged (cross-origin requests
- * remain intact).
+ * The middleware preserves input types throughout the chain: string inputs remain strings,
+ * URL objects remain URLs, and Request objects remain Requests (reconstructed with new URLs).
  *
- * Preserves input types (string→string, URL→URL, Request→Request).
+ * @param opts - Configuration parameters. See {@link BaseUrlOptions} for details.
  *
- * @example
+ * @throws {TypeError} When the provided base URL is invalid or cannot be parsed.
+ *
+ * @example Basic usage with string inputs
  * ```ts
+ * import { withBaseUrl } from "@qfetch/middleware-base-url";
+ *
  * const qfetch = withBaseUrl("https://api.example.com/v1/")(fetch);
  *
- * // Same-origin inputs - all resolve against base path
- * await qfetch("users");                      // → "https://api.example.com/v1/users"
- * await qfetch("/users");                     // → "https://api.example.com/v1/users"
- * await qfetch(new URL("/users", "https://api.example.com"));
- * // → "https://api.example.com/v1/users"
+ * // Same-origin paths - all resolve against the base
+ * await qfetch("users");  // → https://api.example.com/v1/users
+ * await qfetch("/users"); // → https://api.example.com/v1/users (leading slash stripped)
  *
- * // Different-origin inputs - unchanged
- * await qfetch("https://other.com/data");     // → "https://other.com/data"
- * await qfetch(new URL("https://other.com/data"));
- * // → "https://other.com/data"
+ * // Different-origin URL - left unchanged
+ * await qfetch("https://external.com/data"); // → https://external.com/data
  * ```
  *
- * @param opts - Base URL (string or URL instance)
- * @throws {TypeError} When base URL is invalid
- * @see https://url.spec.whatwg.org/
+ * @example Using with URL objects
+ * ```ts
+ * import { withBaseUrl } from "@qfetch/middleware-base-url";
+ *
+ * const qfetch = withBaseUrl("https://api.example.com/v1/")(fetch);
+ *
+ * // Same origin - path resolved against base
+ * const sameOriginUrl = new URL("/users", "https://api.example.com");
+ * await qfetch(sameOriginUrl); // → https://api.example.com/v1/users
+ *
+ * // Different origin - passed through unchanged
+ * const differentOriginUrl = new URL("https://external.com/data");
+ * await qfetch(differentOriginUrl); // → https://external.com/data
+ * ```
+ *
+ * @example Using with Request objects
+ * ```ts
+ * import { withBaseUrl } from "@qfetch/middleware-base-url";
+ *
+ * const qfetch = withBaseUrl("https://api.example.com/v1/")(fetch);
+ *
+ * // Same-origin Request - path resolved against base
+ * const sameOriginRequest = new Request(
+ *   new URL("/users", "https://api.example.com"),
+ *   { method: "POST", body: JSON.stringify({ name: "John" }) }
+ * );
+ * await qfetch(sameOriginRequest); // → https://api.example.com/v1/users
+ * // All other properties (method, headers, body) are preserved
+ * ```
+ *
+ * @see {@link https://url.spec.whatwg.org/ WHATWG URL Standard}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/URL MDN: URL API}
  */
 export const withBaseUrl: Middleware<BaseUrlOptions> = (opts) => {
 	const base = new URL(opts);
