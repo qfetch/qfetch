@@ -2,51 +2,22 @@ import { type BackoffStrategy, waitFor } from "@proventuslabs/retry-strategies";
 import type { Middleware } from "@qfetch/core";
 
 /**
- * Configuration options for the {@link withRetryStatus } middleware.
+ * Configuration options for the {@link withRetryStatus} middleware.
  *
- * Controls retry behavior for failed HTTP requests based on status codes. This middleware
- * automatically retries requests that fail with retryable status codes using a configurable
- * backoff strategy. By default, it retries on standard transient error codes (408, 429, 500,
- * 502, 503, 504), but this can be customized.
- *
- * @example
- * ```ts
- * import { linear, upto } from "@proventuslabs/retry-strategies";
- *
- * // Linear backoff with unlimited retries (strategy determines when to stop)
- * const opts: RetryStatusOptions = {
- *   strategy: () => linear(1000, 10000)
- * };
- *
- * // Linear backoff with maximum 3 retries
- * const optsLimited: RetryStatusOptions = {
- *   strategy: () => upto(3, linear(1000, 10000))
- * };
- *
- * // Custom retryable status codes
- * const optsCustom: RetryStatusOptions = {
- *   strategy: () => upto(3, linear(1000, 10000)),
- *   retryableStatuses: new Set([429, 502, 503, 504])
- * };
- * ```
+ * Controls retry behavior for requests with retryable status codes.
  */
 export type RetryStatusOptions = {
 	/**
 	 * Factory function that creates a backoff strategy for retry delays.
 	 *
-	 * The strategy determines how long to wait between retry attempts and when to stop
-	 * retrying (by returning `NaN`). A new strategy instance is created for each request
-	 * chain to ensure independent retry timing.
-	 *
-	 * To limit the number of retries, wrap the strategy with the `upto()` function from
-	 * `@proventuslabs/retry-strategies`:
+	 * The strategy determines the delay between retry attempts and when to stop retrying
+	 * (by returning `NaN`). Wrap with `upto()` to limit retry attempts.
 	 *
 	 * @example
-	 * ```ts
+	 * ```typescript
 	 * import { linear, upto } from "@proventuslabs/retry-strategies";
 	 *
-	 * // Limit to 3 retries
-	 * strategy: () => upto(3, linear(1000, 10000))
+	 * strategy: () => upto(3, linear(1000, 10_000))
 	 * ```
 	 */
 	strategy: () => BackoffStrategy;
@@ -55,13 +26,7 @@ export type RetryStatusOptions = {
 	 * Set of HTTP status codes that should trigger automatic retries.
 	 *
 	 * Defaults to the standard retryable status codes: `408`, `429`, `500`, `502`, `503`, `504`.
-	 * Override this to customize which status codes should be retried.
-	 *
-	 * @example
-	 * ```ts
-	 * // Retry only on rate limits and gateway errors
-	 * retryableStatuses: new Set([429, 502, 503, 504])
-	 * ```
+	 * Override to customize which status codes should be retried.
 	 *
 	 * @default new Set([408, 429, 500, 502, 503, 504])
 	 */
@@ -69,94 +34,45 @@ export type RetryStatusOptions = {
 };
 
 /**
- * Middleware that automatically retries failed HTTP requests based on response status codes that
- * can be interpreted as transient errors.
+ * Middleware that automatically retries HTTP requests based on response status codes.
  *
- * ### Behavioral summary
- * - **Automatic retry on transient failures**: Retries requests that fail with retryable
- *   status codes. By default, retries on 408, 429, 500, 502, 503, 504. The set of retryable
- *   status codes can be customized via the `retryableStatuses` option. Successful responses (2xx)
- *   and non-retryable errors are returned immediately without retries.
- * - **Configurable backoff strategy**: Uses a provided backoff strategy to compute delays
- *   between retry attempts. The strategy controls both the delay duration and when to stop
- *   retrying (by returning `NaN`).
- * - **Retry limit control**: Limit the number of retry attempts by wrapping your strategy
- *   with the `upto()` function from `@proventuslabs/retry-strategies`. The middleware
- *   continues retrying until the strategy returns `NaN`.
- * - **Request body cleanup**: Automatically cancels the response body stream before retrying
- *   to prevent memory leaks. This is a best-effort operation that won't block retries if
- *   cancellation fails.
- * - **AbortSignal support**: Respects `AbortSignal` from the request to allow cancellation
- *   during retry delays. If the signal is aborted, the wait is interrupted and an error
- *   is thrown.
+ * Retries requests that fail with specific HTTP status codes (by default `408 Request Timeout`,
+ * `429 Too Many Requests`, `500 Internal Server Error`, `502 Bad Gateway`, `503 Service Unavailable`,
+ * and `504 Gateway Timeout`) using configurable backoff strategies per
+ * [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes).
  *
- * ### Retryable status codes
- * By default, the following HTTP status codes trigger automatic retries (per [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes)):
- * - `408 Request Timeout`
- * - `429 Too Many Requests`
- * - `500 Internal Server Error`
- * - `502 Bad Gateway`
- * - `503 Service Unavailable`
- * - `504 Gateway Timeout`
+ * The middleware waits for the strategy's backoff delay, then retries the request. Use the strategy
+ * to control retry limits (strategy returns `NaN` to stop). Successful responses (2xx) and
+ * non-retryable status codes are returned immediately without retrying.
  *
- * This default set can be overridden using the `retryableStatuses` option to customize which
- * status codes should trigger retries.
+ * @param opts - Configuration parameters. See {@link RetryStatusOptions} for details.
+ * @param opts.strategy - Factory function creating a backoff strategy for retry delays.
+ * @param opts.retryableStatuses - Set of HTTP status codes that trigger retries (default: `408`, `429`, `500`, `502`, `503`, `504`).
  *
- * ### Important limitations
- * - **No automatic `Retry-After` header handling**: The middleware does not automatically
- *   parse or respect `Retry-After` response headers. The backoff strategy is solely responsible
- *   for computing retry delays. To respect `Retry-After` headers, use a separate middleware that
- *   parses the header and combines it with this middleware.
- * - **Non-idempotent requests**: The middleware retries all requests regardless of HTTP
- *   method. Be cautious when using with non-idempotent methods (POST, PATCH) as retries
- *   may cause duplicate operations if the initial request partially succeeded.
- * - **Request body consumption**: If the request has a body stream that can only be read
- *   once (e.g., a `ReadableStream`), retries will fail. Use repeatable body types
- *   (string, Blob, FormData) or implement request cloning separately.
- * - **Memory considerations**: Failed response bodies are cancelled before retrying, but
- *   if cancellation fails, the body may remain in memory until garbage collected.
+ * @throws {unknown} If the request's `AbortSignal` is aborted during retry delay.
+ * @throws {RangeError} If the strategy delay exceeds INT32_MAX (2147483647ms).
  *
- * @param opts - Configuration parameters controlling retry behavior and backoff strategy.
- *               See {@link RetryStatusOptions} for details.
- *
- * @throws {unknown} The reason of the AbortSignal if the operation is aborted (generally {@link DOMException} `AbortError`).
- * @throws {RangeError} If the strategy delay exceeds INT32_MAX (2147483647ms, approximately 24.8 days).
- *
- * @example
+ * @example Basic usage with default retryable statuses
  * ```ts
- * // Linear backoff with maximum 5 retries
  * import { withRetryStatus } from "@qfetch/middleware-retry-status";
  * import { linear, upto } from "@proventuslabs/retry-strategies";
  *
  * const qfetch = withRetryStatus({
- *   strategy: () => upto(5, linear(1000, 10000))
+ *   strategy: () => upto(3, linear(1000, 10_000))
  * })(fetch);
  *
  * const response = await qfetch("https://api.example.com/data");
  * ```
  *
- * @example
+ * @example Custom retryable status codes
  * ```ts
- * // Linear backoff with unlimited retries
- * import { withRetryStatus } from "@qfetch/middleware-retry-status";
- * import { linear } from "@proventuslabs/retry-strategies";
- *
- * const qfetch = withRetryStatus({
- *   strategy: () => linear(1000, 10000)
- * })(fetch);
- *
- * const response = await qfetch("https://api.example.com/data");
- * ```
- *
- * @example
- * ```ts
- * // Custom retryable status codes (only retry on rate limits and gateway errors)
  * import { withRetryStatus } from "@qfetch/middleware-retry-status";
  * import { exponential, upto } from "@proventuslabs/retry-strategies";
  *
+ * // Retry on 429, 502 (Bad Gateway), and 503 (Service Unavailable)
  * const qfetch = withRetryStatus({
  *   strategy: () => upto(3, exponential(500, 5000, 2)),
- *   retryableStatuses: new Set([429, 502, 503, 504])
+ *   retryableStatuses: new Set([429, 502, 503])
  * })(fetch);
  *
  * const response = await qfetch("https://api.example.com/data");
