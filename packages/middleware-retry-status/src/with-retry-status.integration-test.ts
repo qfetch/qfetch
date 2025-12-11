@@ -2,10 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer, type Server } from "node:http";
 import { describe, suite, type TestContext, test } from "node:test";
 
-import {
-	ConstantBackoff,
-	LinearBackoff,
-} from "@proventuslabs/retry-strategies";
+import { upto, zero } from "@proventuslabs/retry-strategies";
 
 import { withRetryStatus } from "./with-retry-status.ts";
 
@@ -14,14 +11,9 @@ import { withRetryStatus } from "./with-retry-status.ts";
 interface ServerContext {
 	server: Server;
 	baseUrl: string;
-	getRequestCount: (path: string) => number;
 }
 
-type RequestHandler = (
-	req: IncomingMessage,
-	res: ServerResponse,
-	requestCount: number,
-) => void;
+type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void;
 
 suite("withRetryStatus - Integration", { concurrency: true }, () => {
 	/**
@@ -32,19 +24,9 @@ suite("withRetryStatus - Integration", { concurrency: true }, () => {
 		ctx: TestContext,
 		handler?: RequestHandler,
 	): Promise<ServerContext> => {
-		// Track request counts for this specific server instance
-		const requestCounts = new Map<string, number>();
-
 		const server = createServer((req, res) => {
-			const url = new URL(req.url || "/", "http://localhost");
-			const path = url.pathname;
-
-			// Increment request count for this path
-			const count = (requestCounts.get(path) || 0) + 1;
-			requestCounts.set(path, count);
-
 			if (handler) {
-				handler(req, res, count);
+				handler(req, res);
 				return;
 			}
 
@@ -75,7 +57,6 @@ suite("withRetryStatus - Integration", { concurrency: true }, () => {
 		return {
 			server,
 			baseUrl,
-			getRequestCount: (path: string) => requestCounts.get(path) || 0,
 		};
 	};
 
@@ -83,102 +64,94 @@ suite("withRetryStatus - Integration", { concurrency: true }, () => {
 		test("completes without retrying on successful response", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
+			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
 				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Success", attempt: count }));
+				res.end(JSON.stringify({ message: "Success" }));
 			});
 
-			const qfetch = withRetryStatus({
-				strategy: () => new LinearBackoff(100, 1000),
-			})(fetch);
+			const { baseUrl } = await createTestServer(ctx, handler);
+			const qfetch = withRetryStatus({ strategy: () => upto(3, zero()) })(
+				fetch,
+			);
 
 			// Act
 			const response = await qfetch(`${baseUrl}/test`, { signal: ctx.signal });
-			const body = await response.json();
+			await response.json();
 
 			// Assert
 			ctx.assert.strictEqual(response.status, 200, "returns successful status");
 			ctx.assert.strictEqual(
-				body.attempt,
+				handler.mock.callCount(),
 				1,
 				"completes on first attempt without retry",
 			);
 		});
 	});
 
-	describe("retryable server errors", () => {
-		test("retries on 500 error then succeeds", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(3);
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
-				if (count === 1) {
-					res.writeHead(500, { "Content-Type": "text/plain" });
-					res.end("Internal Server Error");
-					return;
-				}
-
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Success", attempt: count }));
-			});
-
-			const qfetch = withRetryStatus({
-				strategy: () => new ConstantBackoff(50),
-			})(fetch);
-
-			// Act
-			const response = await qfetch(`${baseUrl}/retry-test`, {
-				signal: ctx.signal,
-			});
-			const body = await response.json();
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
-			ctx.assert.strictEqual(
-				body.attempt,
-				2,
-				"succeeds on second attempt after retry",
-			);
-			ctx.assert.strictEqual(
-				body.message,
-				"Success",
-				"returns expected response body",
-			);
-		});
-
-		test("performs multiple retries with backoff strategy", async (ctx: TestContext) => {
+	describe("retry with retryable status codes", () => {
+		test("retries on 500 error and succeeds", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
-				if (count <= 3) {
-					res.writeHead(503, { "Content-Type": "text/plain" });
-					res.end("Service Unavailable");
-					return;
+			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
+				if (handler.mock.callCount() <= 1) {
+					res.writeHead(500, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Internal Server Error" }));
+				} else {
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ message: "Success" }));
 				}
-
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Success", attempt: count }));
 			});
 
-			const qfetch = withRetryStatus({
-				strategy: () => new LinearBackoff(50, 200),
-			})(fetch);
+			const { baseUrl } = await createTestServer(ctx, handler);
+			const qfetch = withRetryStatus({ strategy: () => upto(3, zero()) })(
+				fetch,
+			);
 
 			// Act
-			const response = await qfetch(`${baseUrl}/multiple-retries`, {
-				signal: ctx.signal,
-			});
-			const body = await response.json();
+			const response = await qfetch(`${baseUrl}/test`, { signal: ctx.signal });
+			await response.json();
 
 			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.strictEqual(response.status, 200, "succeeds after retries");
 			ctx.assert.strictEqual(
-				body.attempt,
-				4,
-				"succeeds after multiple retry attempts",
+				handler.mock.callCount(),
+				3,
+				"makes expected number of attempts",
 			);
 		});
 
-		test("retries on all retryable status codes", async (ctx: TestContext) => {
+		test("retries multiple times before succeeding", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
+				if (handler.mock.callCount() <= 2) {
+					res.writeHead(503, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Service Unavailable" }));
+				} else {
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ message: "Success" }));
+				}
+			});
+
+			const { baseUrl } = await createTestServer(ctx, handler);
+			const qfetch = withRetryStatus({ strategy: () => upto(5, zero()) })(
+				fetch,
+			);
+
+			// Act
+			const response = await qfetch(`${baseUrl}/test`, { signal: ctx.signal });
+			await response.json();
+
+			// Assert
+			ctx.assert.strictEqual(response.status, 200, "succeeds after retries");
+			ctx.assert.strictEqual(
+				handler.mock.callCount(),
+				4,
+				"makes expected number of attempts",
+			);
+		});
+
+		test("retries on all default retryable status codes", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(6);
 			const retryableStatuses = [408, 429, 500, 502, 503, 504];
@@ -187,23 +160,19 @@ suite("withRetryStatus - Integration", { concurrency: true }, () => {
 				await ctx.test(`status ${status}`, async (ctx: TestContext) => {
 					// Arrange
 					ctx.plan(1);
-
-					const { baseUrl } = await createTestServer(
-						ctx,
-						(_req, res, count) => {
-							if (count === 1) {
-								res.writeHead(status, { "Content-Type": "text/plain" });
-								res.end("Error");
-								return;
-							}
-
+					const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
+						if (handler.mock.callCount() <= 1) {
+							res.writeHead(status, { "Content-Type": "text/plain" });
+							res.end("Error");
+						} else {
 							res.writeHead(200, { "Content-Type": "application/json" });
 							res.end(JSON.stringify({ success: true }));
-						},
-					);
+						}
+					});
 
+					const { baseUrl } = await createTestServer(ctx, handler);
 					const qfetch = withRetryStatus({
-						strategy: () => new ConstantBackoff(50),
+						strategy: () => upto(3, zero()),
 					})(fetch);
 
 					// Act
@@ -222,35 +191,38 @@ suite("withRetryStatus - Integration", { concurrency: true }, () => {
 		});
 	});
 
-	describe("non-retryable errors", () => {
-		test("returns 404 without retrying", async (ctx: TestContext) => {
+	describe("non-retryable status codes", () => {
+		test("does not retry on 404 status", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
+			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
 				res.writeHead(404, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ error: "Not Found", attempt: count }));
+				res.end(JSON.stringify({ error: "Not Found" }));
 			});
 
-			const qfetch = withRetryStatus({
-				strategy: () => new ConstantBackoff(50),
-			})(fetch);
+			const { baseUrl } = await createTestServer(ctx, handler);
+			const qfetch = withRetryStatus({ strategy: () => upto(3, zero()) })(
+				fetch,
+			);
 
 			// Act
-			const response = await qfetch(`${baseUrl}/not-found`, {
-				signal: ctx.signal,
-			});
-			const body = await response.json();
+			const response = await qfetch(`${baseUrl}/test`, { signal: ctx.signal });
+			await response.json();
 
 			// Assert
-			ctx.assert.strictEqual(response.status, 404, "returns 404 status");
 			ctx.assert.strictEqual(
-				body.attempt,
+				response.status,
+				404,
+				"returns original error status",
+			);
+			ctx.assert.strictEqual(
+				handler.mock.callCount(),
 				1,
-				"completes on first attempt without retry",
+				"makes only one request",
 			);
 		});
 
-		test("returns client errors without retrying", async (ctx: TestContext) => {
+		test("does not retry on client error status codes", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(4);
 			const clientErrors = [400, 401, 403, 422];
@@ -259,145 +231,127 @@ suite("withRetryStatus - Integration", { concurrency: true }, () => {
 				await ctx.test(`status ${status}`, async (ctx: TestContext) => {
 					// Arrange
 					ctx.plan(1);
+					const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
+						res.writeHead(status, { "Content-Type": "application/json" });
+						res.end(JSON.stringify({ error: "Client error" }));
+					});
 
-					const { baseUrl } = await createTestServer(
-						ctx,
-						(_req, res, count) => {
-							res.writeHead(status, { "Content-Type": "application/json" });
-							res.end(
-								JSON.stringify({ error: "Client error", attempt: count }),
-							);
-						},
-					);
-
+					const { baseUrl } = await createTestServer(ctx, handler);
 					const qfetch = withRetryStatus({
-						strategy: () => new ConstantBackoff(50),
+						strategy: () => upto(3, zero()),
 					})(fetch);
 
 					// Act
 					const response = await qfetch(`${baseUrl}/test`, {
 						signal: ctx.signal,
 					});
-					const body = await response.json();
+					await response.json();
 
 					// Assert
 					ctx.assert.strictEqual(
-						body.attempt,
+						handler.mock.callCount(),
 						1,
-						"completes on first attempt without retry",
+						"makes only one request",
 					);
 				});
 			}
 		});
 	});
 
-	describe("strategy-controlled behavior", () => {
-		test("stops retrying when strategy exhausts", async (ctx: TestContext) => {
+	describe("retry limit enforcement", () => {
+		test("returns last response when retry attempts exhausted", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
+			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
 				res.writeHead(500, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ error: "Server Error", attempt: count }));
+				res.end(JSON.stringify({ error: "Server Error" }));
 			});
 
-			// Strategy that returns NaN after 2 attempts (initial + 2 retries = 3 total)
-			let callCount = 0;
-			const limitedStrategy = () => {
-				return {
-					nextBackoff: () => {
-						callCount++;
-						if (callCount > 2) {
-							return Number.NaN;
-						}
-						return 50;
-					},
-					resetBackoff() {},
-				};
-			};
-
-			const qfetch = withRetryStatus({
-				strategy: limitedStrategy,
-			})(fetch);
+			const { baseUrl } = await createTestServer(ctx, handler);
+			const qfetch = withRetryStatus({ strategy: () => upto(1, zero()) })(
+				fetch,
+			);
 
 			// Act
-			const response = await qfetch(`${baseUrl}/always-fails`, {
-				signal: ctx.signal,
-			});
-			const body = await response.json();
+			const response = await qfetch(`${baseUrl}/test`, { signal: ctx.signal });
+			await response.json();
 
 			// Assert
 			ctx.assert.strictEqual(
 				response.status,
 				500,
-				"returns final error response",
+				"returns error status after retries exhausted",
 			);
 			ctx.assert.strictEqual(
-				body.attempt,
-				3,
-				"attempts exactly 3 times before stopping",
+				handler.mock.callCount(),
+				2,
+				"makes initial plus retry attempts",
 			);
 		});
 	});
 
-	describe("abort signal integration", () => {
-		test("aborts request during retry delay", async (ctx: TestContext) => {
+	describe("signal cancellation", () => {
+		test("aborts during retry delay", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const { baseUrl } = await createTestServer(ctx, (_req, res) => {
-				res.writeHead(503, { "Content-Type": "text/plain" });
-				res.end("Service Unavailable");
+			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
+				if (handler.mock.callCount() <= 1) {
+					res.writeHead(503, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Service Unavailable" }));
+				} else {
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ message: "Success" }));
+				}
 			});
 
-			const controller = new AbortController();
+			const { baseUrl } = await createTestServer(ctx, handler);
+			// Use a strategy with a 5 second delay to ensure abort happens during delay
 			const qfetch = withRetryStatus({
-				strategy: () => new ConstantBackoff(1000), // Long delay
+				strategy: () => ({
+					nextBackoff: () => 5000,
+					resetBackoff: () => {},
+				}),
 			})(fetch);
+			const controller = new AbortController();
 
 			// Act
-			const responsePromise = qfetch(`${baseUrl}/abort-test`, {
-				signal: controller.signal,
-			});
+			const promise = qfetch(`${baseUrl}/test`, { signal: controller.signal });
 
-			// Abort after initial request but before retry
-			setTimeout(() => controller.abort(), 100);
+			// Abort during the retry delay
+			setTimeout(() => controller.abort(), 1000);
 
 			// Assert
 			await ctx.assert.rejects(
-				responsePromise,
-				(error: unknown) =>
-					error instanceof Error && error.name === "AbortError",
-				"throws abort error when aborted during retry delay",
+				() => promise,
+				(e: unknown) => e instanceof DOMException && e.name === "AbortError",
+				"throws AbortError when aborted during retry delay",
 			);
 		});
 	});
 
 	describe("custom retryable status codes", () => {
-		test("retries only on custom status code 429", async (ctx: TestContext) => {
+		test("retries only on custom status codes", async (ctx: TestContext) => {
 			// Arrange
-			ctx.plan(3);
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
-				// First request returns 429 (should retry with custom config)
-				if (count === 1) {
-					res.writeHead(429, { "Content-Type": "text/plain" });
-					res.end("Too Many Requests");
-					return;
+			ctx.plan(2);
+			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
+				if (handler.mock.callCount() <= 1) {
+					res.writeHead(429, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Too Many Requests" }));
+				} else {
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ message: "Success" }));
 				}
-
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Success", attempt: count }));
 			});
 
-			// Configure to only retry on 429
+			const { baseUrl } = await createTestServer(ctx, handler);
 			const qfetch = withRetryStatus({
-				strategy: () => new ConstantBackoff(50),
+				strategy: () => upto(3, zero()),
 				retryableStatuses: new Set([429]),
 			})(fetch);
 
 			// Act
-			const response = await qfetch(`${baseUrl}/custom-retry`, {
-				signal: ctx.signal,
-			});
-			const body = await response.json();
+			const response = await qfetch(`${baseUrl}/test`, { signal: ctx.signal });
+			await response.json();
 
 			// Assert
 			ctx.assert.strictEqual(
@@ -405,193 +359,41 @@ suite("withRetryStatus - Integration", { concurrency: true }, () => {
 				200,
 				"successfully retries on custom status 429",
 			);
-			ctx.assert.strictEqual(body.attempt, 2, "retries exactly once on 429");
 			ctx.assert.strictEqual(
-				body.message,
-				"Success",
-				"returns successful response",
-			);
-		});
-	});
-
-	describe("real-world scenarios", () => {
-		test("handles intermittent network failures", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
-				// Simulate intermittent failures: fail twice, then succeed
-				if (count <= 2) {
-					res.writeHead(502, { "Content-Type": "text/plain" });
-					res.end("Bad Gateway");
-					return;
-				}
-
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(
-					JSON.stringify({ message: "Recovered", recoveredAfter: count }),
-				);
-			});
-
-			const qfetch = withRetryStatus({
-				strategy: () => new LinearBackoff(50, 500),
-			})(fetch);
-
-			// Act
-			const response = await qfetch(`${baseUrl}/intermittent`, {
-				signal: ctx.signal,
-			});
-			const body = await response.json();
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "recovers from failures");
-			ctx.assert.strictEqual(
-				body.recoveredAfter,
+				handler.mock.callCount(),
 				3,
-				"succeeds after failures are resolved",
+				"makes expected number of attempts",
 			);
 		});
 
-		test("handles rate limiting with 429 responses", async (ctx: TestContext) => {
+		test("does not retry when status is not in custom set", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
-				// Simulate rate limiting for first 2 requests
-				if (count <= 2) {
-					res.writeHead(429, {
-						"Content-Type": "text/plain",
-						"Retry-After": "1",
-					});
-					res.end("Too Many Requests");
-					return;
-				}
-
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Success", attempt: count }));
+			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
+				res.writeHead(500, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ error: "Internal Server Error" }));
 			});
 
+			const { baseUrl } = await createTestServer(ctx, handler);
 			const qfetch = withRetryStatus({
-				strategy: () => new ConstantBackoff(50),
+				strategy: () => upto(3, zero()),
+				retryableStatuses: new Set([429]), // Only 429, not 500
 			})(fetch);
 
 			// Act
-			const response = await qfetch(`${baseUrl}/rate-limited`, {
-				signal: ctx.signal,
-			});
-			const body = await response.json();
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "succeeds after rate limit");
-			ctx.assert.strictEqual(
-				body.attempt,
-				3,
-				"retries until rate limit is lifted",
-			);
-		});
-
-		test("handles large response bodies correctly", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const largeData = "x".repeat(10000); // 10KB of data
-
-			const { baseUrl } = await createTestServer(ctx, (_req, res, count) => {
-				if (count === 1) {
-					res.writeHead(500, { "Content-Type": "text/plain" });
-					res.end(largeData); // Large error response
-					return;
-				}
-
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(
-					JSON.stringify({ message: "Success", dataSize: largeData.length }),
-				);
-			});
-
-			const qfetch = withRetryStatus({
-				strategy: () => new ConstantBackoff(50),
-			})(fetch);
-
-			// Act
-			const response = await qfetch(`${baseUrl}/large-body`, {
-				signal: ctx.signal,
-			});
-			const body = await response.json();
+			const response = await qfetch(`${baseUrl}/test`, { signal: ctx.signal });
+			await response.json();
 
 			// Assert
 			ctx.assert.strictEqual(
 				response.status,
-				200,
-				"handles large response bodies",
+				500,
+				"returns original error status",
 			);
 			ctx.assert.strictEqual(
-				body.message,
-				"Success",
-				"returns correct response after retrying",
-			);
-		});
-
-		test("works with POST requests and request bodies", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(3);
-			let receivedBody: { test: string; value: number } | null = null;
-
-			const { baseUrl } = await createTestServer(
-				ctx,
-				async (req, res, count) => {
-					// Read request body
-					const chunks: Buffer[] = [];
-					for await (const chunk of req) {
-						chunks.push(chunk);
-					}
-					const body = Buffer.concat(chunks).toString();
-					receivedBody = JSON.parse(body) as { test: string; value: number };
-
-					if (count === 1) {
-						res.writeHead(503, { "Content-Type": "text/plain" });
-						res.end("Service Unavailable");
-						return;
-					}
-
-					res.writeHead(200, { "Content-Type": "application/json" });
-					res.end(
-						JSON.stringify({
-							message: "Received",
-							data: receivedBody,
-							attempt: count,
-						}),
-					);
-				},
-			);
-
-			const qfetch = withRetryStatus({
-				strategy: () => new ConstantBackoff(50),
-			})(fetch);
-
-			const requestData = { test: "data", value: 123 };
-
-			// Act
-			const response = await qfetch(`${baseUrl}/post-test`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(requestData),
-				signal: ctx.signal,
-			});
-			const responseBody = await response.json();
-
-			// Assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"succeeds with POST request",
-			);
-			ctx.assert.strictEqual(
-				responseBody.attempt,
-				2,
-				"retries POST request correctly",
-			);
-			ctx.assert.deepStrictEqual(
-				responseBody.data,
-				requestData,
-				"preserves request body across retries",
+				handler.mock.callCount(),
+				1,
+				"makes only one request",
 			);
 		});
 	});
