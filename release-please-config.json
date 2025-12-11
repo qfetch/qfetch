@@ -16,6 +16,15 @@
 					"jsonpath": "$.version"
 				}
 			]
+		},
+		"packages/middleware-retry-after": {
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "jsr.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }

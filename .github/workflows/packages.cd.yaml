@@ -20,6 +20,8 @@ jobs:
       # are set up to handle multiple packages and will output these.
       "packages/core--tag_name": ${{ steps.release.outputs['packages/core--tag_name'] }}
       "packages/core--release_created": ${{ steps.release.outputs['packages/core--release_created'] }}
+      "packages/middleware-retry-after--tag_name": ${{ steps.release.outputs['packages/middleware-retry-after--tag_name'] }}
+      "packages/middleware-retry-after--release_created": ${{ steps.release.outputs['packages/middleware-retry-after--release_created'] }}
       # Add more outputs for other packages here
 
     steps:
@@ -43,3 +45,12 @@ jobs:
       package_path: "packages/core"
       package_name: "@qfetch/core"
       package_tag: ${{ needs.release-please.outputs['packages/core--tag_name'] }}
+
+  middleware-retry-after:
+    needs: release-please
+    if: ${{ needs.release-please.outputs['packages/middleware-retry-after--release_created'] == 'true' }}
+    uses: ./.github/workflows/_template.package-cd.yaml
+    with:
+      package_path: "packages/middleware-retry-after"
+      package_name: "@qfetch/middleware-retry-after"
+      package_tag: ${{ needs.release-please.outputs['packages/middleware-retry-after--tag_name'] }}
