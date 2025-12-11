@@ -4,7 +4,7 @@ import { type BaseUrlOptions, withBaseUrl } from "./with-base-url.ts";
 
 /* node:coverage disable */
 
-suite("withBaseUrl - middleware", () => {
+suite("withBaseUrl - unit middleware", () => {
 	describe("configuration validation ensures base URL correctness", () => {
 		test("throws error when base URL is invalid", (ctx: TestContext) => {
 			// Arrange
