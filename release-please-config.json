@@ -25,6 +25,15 @@
 					"jsonpath": "$.version"
 				}
 			]
+		},
+		"packages/middleware-retry-status": {
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "jsr.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }
