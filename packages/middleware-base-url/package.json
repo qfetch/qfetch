@@ -1,0 +1,57 @@
+{
+	"name": "@qfetch/middleware-base-url",
+	"description": "Fetch middleware for base URL resolution using standard URL constructor behavior.",
+	"version": "0.1.0",
+	"author": "vabatta",
+	"bugs": "https://github.com/qfetch/qfetch/issues",
+	"devDependencies": {
+		"@qfetch/core": "workspace:",
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist"
+	],
+	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middleware-base-url#readme",
+	"keywords": [
+		"base-url",
+		"composable",
+		"fetch",
+		"http",
+		"middleware",
+		"typescript",
+		"url",
+		"url-resolution"
+	],
+	"license": "MIT",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/qfetch/qfetch.git",
+		"directory": "packages/middleware-base-url"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check-types": "tsc --noEmit",
+		"style": "biome check .",
+		"test": "node --test",
+		"test:e2e": "node --test \"src/**/*.e2e-test.ts\"",
+		"test:integration": "node --test \"src/**/*.integration-test.ts\"",
+		"test:unit": "node --test \"src/**/*.test.ts\""
+	},
+	"type": "module",
+	"types": "./dist/index.d.ts"
+}
