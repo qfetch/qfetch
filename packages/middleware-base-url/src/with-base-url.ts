@@ -42,7 +42,8 @@ export type BaseUrlOptions = string | URL;
  *
  * @param opts - Configuration parameters. See {@link BaseUrlOptions} for details.
  *
- * @throws {TypeError} When the provided base URL is invalid or cannot be parsed.
+ * @throws {TypeError} When the provided base URL is invalid or cannot be parsed,
+ *                     or when a string input cannot be resolved against the base URL.
  *
  * @example
  * ```ts
