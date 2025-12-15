@@ -275,7 +275,11 @@ suite("withBaseUrl - unit middleware", () => {
 			});
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
 				ctx.assert.ok(input instanceof Request, "input is a Request");
-				ctx.assert.strictEqual(input, inputRequest, "same Request object reference");
+				ctx.assert.strictEqual(
+					input,
+					inputRequest,
+					"same Request object reference",
+				);
 
 				return new Response();
 			});
