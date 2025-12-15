@@ -43,7 +43,7 @@ suite("withBaseUrl - unit middleware", () => {
 		});
 	});
 
-	describe("string inputs are correctly resolved against base URL", () => {
+	describe("string inputs follow standard URL resolution", () => {
 		test("resolves relative paths against base URL", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
@@ -64,15 +64,15 @@ suite("withBaseUrl - unit middleware", () => {
 			await qfetch("users");
 		});
 
-		test("resolves same-origin absolute paths against base URL", async (ctx: TestContext) => {
+		test("resolves absolute paths against base URL", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
 				ctx.assert.ok(typeof input === "string", "input is a string");
 				ctx.assert.equal(
 					input,
-					"http://api.local/v1/users",
-					"same-origin absolute path resolves against base URL",
+					"http://api.local/users",
+					"absolute path replaces base path per URL standard",
 				);
 
 				return new Response();
@@ -84,7 +84,7 @@ suite("withBaseUrl - unit middleware", () => {
 			await qfetch("/users");
 		});
 
-		test("passes through different-origin URLs unchanged", async (ctx: TestContext) => {
+		test("ignores base URL for absolute URLs with different origin", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
@@ -92,7 +92,7 @@ suite("withBaseUrl - unit middleware", () => {
 				ctx.assert.equal(
 					input,
 					"http://example.com/data",
-					"different-origin URL remains unchanged",
+					"absolute URL ignores base URL",
 				);
 
 				return new Response();
@@ -104,7 +104,7 @@ suite("withBaseUrl - unit middleware", () => {
 			await qfetch("http://example.com/data");
 		});
 
-		test("passes through same-origin absolute URLs unchanged", async (ctx: TestContext) => {
+		test("ignores base URL for absolute URLs with same origin", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
@@ -112,7 +112,7 @@ suite("withBaseUrl - unit middleware", () => {
 				ctx.assert.equal(
 					input,
 					"http://api.local/data",
-					"same-origin absolute URL remains unchanged",
+					"absolute URL ignores base URL regardless of origin",
 				);
 
 				return new Response();
@@ -164,7 +164,7 @@ suite("withBaseUrl - unit middleware", () => {
 			await qfetch("users#section");
 		});
 
-		test("preserves query parameters when resolving absolute string paths", async (ctx: TestContext) => {
+		test("preserves query parameters with absolute string paths", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
@@ -184,7 +184,7 @@ suite("withBaseUrl - unit middleware", () => {
 			await qfetch("/users?page=1");
 		});
 
-		test("preserves hash when resolving absolute string paths", async (ctx: TestContext) => {
+		test("preserves hash with absolute string paths", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
@@ -211,8 +211,8 @@ suite("withBaseUrl - unit middleware", () => {
 				ctx.assert.ok(typeof input === "string", "input is a string");
 				ctx.assert.equal(
 					input,
-					"http://api.local/v1/",
-					"root path resolves to base URL",
+					"http://api.local/",
+					"root path replaces base path",
 				);
 
 				return new Response();
@@ -223,143 +223,16 @@ suite("withBaseUrl - unit middleware", () => {
 			// Act
 			await qfetch("/");
 		});
-	});
 
-	describe("URL inputs are correctly resolved against base URL", () => {
-		test("resolves same-origin URL with relative pathname against base URL", async (ctx: TestContext) => {
+		test("resolves empty string against base URL", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
+				ctx.assert.ok(typeof input === "string", "input is a string");
 				ctx.assert.equal(
-					input.toString(),
-					"http://api.local/v1/users",
-					"same-origin URL with relative pathname is resolved against base URL",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			// Create a URL object and test edge case where pathname might not start with "/"
-			// While http/https URLs always have "/" prefix, test the defensive code path
-			const url = new URL("http://api.local");
-			// Manually construct a URL-like scenario by resolving "users" which gives "/users"
-			const testUrl = new URL("users", url);
-			await qfetch(testUrl);
-		});
-
-		test("resolves same-origin URL paths against base URL", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
-				ctx.assert.equal(
-					input.toString(),
-					"http://api.local/v1/users",
-					"same-origin URL path is resolved against base URL",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			await qfetch(new URL("users", "http://api.local"));
-		});
-
-		test("resolves same-origin URL with absolute path against base", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
-				ctx.assert.equal(
-					input.toString(),
-					"http://api.local/v1/users",
-					"same-origin URL with absolute path resolves against base",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			await qfetch(new URL("/users", "http://api.local"));
-		});
-
-		test("passes through different-origin URLs unchanged", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
-				ctx.assert.equal(
-					input.toString(),
-					"http://example.com/data",
-					"different-origin URL remains unchanged",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			await qfetch(new URL("http://example.com/data"));
-		});
-
-		test("preserves query parameters when resolving same-origin URLs", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
-				ctx.assert.equal(
-					input.toString(),
-					"http://api.local/v1/users?page=1",
-					"query parameters are preserved",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			await qfetch(new URL("/users?page=1", "http://api.local"));
-		});
-
-		test("preserves hash when resolving same-origin URLs", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
-				ctx.assert.equal(
-					input.toString(),
-					"http://api.local/v1/users#section",
-					"hash is preserved",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			await qfetch(new URL("/users#section", "http://api.local"));
-		});
-
-		test("resolves same-origin URL with empty pathname against base", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
-				ctx.assert.equal(
-					input.toString(),
+					input,
 					"http://api.local/v1/",
-					"empty pathname resolves to base URL",
+					"empty string resolves to base URL",
 				);
 
 				return new Response();
@@ -368,72 +241,18 @@ suite("withBaseUrl - unit middleware", () => {
 			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
 
 			// Act
-			await qfetch(new URL("http://api.local"));
-		});
-
-		test("preserves query and hash when resolving same-origin URLs", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
-				ctx.assert.equal(
-					input.toString(),
-					"http://api.local/v1/users?page=1#section",
-					"query and hash are both preserved",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			await qfetch(new URL("/users?page=1#section", "http://api.local"));
-		});
-
-		test("handles URL with pathname not starting with slash", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof URL, "input is a URL");
-				ctx.assert.equal(
-					input.toString(),
-					"http://api.local/v1/users",
-					"pathname without leading slash is handled correctly",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			// Create a Proxy that simulates a URL with pathname not starting with "/"
-			const baseUrl = new URL("http://api.local/users");
-			const proxiedUrl = new Proxy(baseUrl, {
-				get(target, prop) {
-					if (prop === "pathname") {
-						return "users"; // Return pathname without leading slash
-					}
-					return target[prop as keyof URL];
-				},
-			}) as URL;
-
-			await qfetch(proxiedUrl);
+			await qfetch("");
 		});
 	});
 
-	describe("Request inputs are correctly resolved against base URL", () => {
-		test("resolves same-origin Request paths against base URL", async (ctx: TestContext) => {
+	describe("URL inputs are passed through unchanged", () => {
+		test("passes URL objects through unchanged", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
+			const inputUrl = new URL("http://example.com/data");
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof Request, "input is a Request");
-				ctx.assert.equal(
-					input.url,
-					"http://api.local/v1/users",
-					"same-origin Request path is resolved against base URL",
-				);
+				ctx.assert.ok(input instanceof URL, "input is a URL");
+				ctx.assert.strictEqual(input, inputUrl, "same URL object reference");
 
 				return new Response();
 			});
@@ -441,20 +260,22 @@ suite("withBaseUrl - unit middleware", () => {
 			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
 
 			// Act
-			const request = new Request(new URL("users", "http://api.local"));
-			await qfetch(request);
+			await qfetch(inputUrl);
 		});
+	});
 
-		test("resolves same-origin Request with absolute path against base", async (ctx: TestContext) => {
+	describe("Request inputs are passed through unchanged", () => {
+		test("passes Request objects through unchanged", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
+			const inputRequest = new Request("http://example.com/data", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ name: "John" }),
+			});
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
 				ctx.assert.ok(input instanceof Request, "input is a Request");
-				ctx.assert.equal(
-					input.url,
-					"http://api.local/v1/users",
-					"same-origin Request with absolute path resolves against base",
-				);
+				ctx.assert.strictEqual(input, inputRequest, "same Request object reference");
 
 				return new Response();
 			});
@@ -462,73 +283,7 @@ suite("withBaseUrl - unit middleware", () => {
 			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
 
 			// Act
-			const request = new Request(new URL("/users", "http://api.local"));
-			await qfetch(request);
-		});
-
-		test("passes through different-origin Requests unchanged", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof Request, "input is a Request");
-				ctx.assert.equal(
-					input.url,
-					"http://example.com/data",
-					"different-origin Request remains unchanged",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			const request = new Request("http://example.com/data");
-			await qfetch(request);
-		});
-
-		test("preserves query parameters when resolving same-origin Requests", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof Request, "input is a Request");
-				ctx.assert.equal(
-					input.url,
-					"http://api.local/v1/users?page=1",
-					"query parameters are preserved",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			const request = new Request(new URL("/users?page=1", "http://api.local"));
-			await qfetch(request);
-		});
-
-		test("preserves hash when resolving same-origin Requests", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(fetch, async (input) => {
-				ctx.assert.ok(input instanceof Request, "input is a Request");
-				ctx.assert.equal(
-					input.url,
-					"http://api.local/v1/users#section",
-					"hash is preserved",
-				);
-
-				return new Response();
-			});
-
-			const qfetch = withBaseUrl("http://api.local/v1/")(fetchMock);
-
-			// Act
-			const request = new Request(
-				new URL("/users#section", "http://api.local"),
-			);
-			await qfetch(request);
+			await qfetch(inputRequest);
 		});
 	});
 });

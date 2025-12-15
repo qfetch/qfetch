@@ -4,9 +4,17 @@ Fetch middleware for automatically resolving URLs against a configured base URL.
 
 ## Overview
 
-Automatically resolves request URLs against a configured base URL with **consistent same-origin handling**. All same-origin requests (even those with absolute paths like `/users`) are treated as relative to the base path, while different-origin requests pass through unchanged.
+Automatically resolves **string** request URLs against a configured base URL following standard URL constructor behavior:
 
-This utility-first approach deviates from strict [URL Standard](https://url.spec.whatwg.org/) behavior to provide a more intuitive and consistent developer experience when working with API clients.
+**String inputs (resolved using `new URL(input, base)`):**
+- **Relative URLs** (like `"users"`) → resolved against the base URL
+- **Absolute paths** (like `"/users"`) → replaces the base URL's pathname (keeps protocol + host from base)
+- **Absolute URLs with scheme** (like `"https://example.com/data"`) → ignores the base URL entirely
+
+**URL objects and Request objects:**
+- Passed through unchanged, as they already contain absolute URLs
+
+This middleware strictly follows the [URL Standard](https://url.spec.whatwg.org/) for predictable and standards-compliant behavior.
 
 Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
@@ -20,7 +28,7 @@ npm install @qfetch/middleware-base-url
 
 ### `withBaseUrl(options)`
 
-Creates a middleware that resolves request URLs against the given base URL.
+Creates a middleware that resolves request URLs against the given base URL using standard URL resolution.
 
 #### Options
 
@@ -32,37 +40,44 @@ Creates a middleware that resolves request URLs against the given base URL.
 
 #### Behavior
 
-- **Same-origin requests** - All paths (including those starting with `/`) are treated as relative and resolved against the base path
-- **Different-origin requests** - Passed through unchanged (cross-origin requests remain intact)
+The middleware only applies base URL resolution to **string inputs**, following the URL constructor standard behavior:
+
+**String inputs (resolved using `new URL(input, base)`):**
+- **Relative URLs** (e.g., `"users"`) → resolved against the base URL
+- **Absolute paths** (e.g., `"/users"`) → replaces the base URL's pathname (keeps protocol + host from base)
+- **Absolute URLs with scheme** (e.g., `"https://..."`) → ignores the base URL entirely
+
+**URL objects:**
+- Passed through unchanged (already contain absolute URLs)
+
+**Request objects:**
+- Passed through unchanged (already contain absolute URLs)
+
+**General behavior:**
 - **Type preservation** - Input types are preserved (string→string, URL→URL, Request→Request)
 - **Query parameters and fragments** - Always preserved during URL resolution
-- **Request properties** - Method, headers, body, and other properties are preserved when reconstructing Request objects
 
-### URL Resolution Behavior
+### URL Resolution Reference
 
-The middleware uses **consistent same-origin detection** across all input types:
+String inputs follow the URL constructor standard behavior: `new URL(input, base)`
 
-#### Same-Origin Requests
+```typescript
+const base = "https://api.example.com/v1/";
 
-All same-origin requests (strings, URLs, or Requests) have their paths treated as **relative** and resolved against the base path - even if they start with `/`:
+// Case 1: Relative URLs → resolved against base
+new URL("users", base)        // → "https://api.example.com/v1/users"
 
-* `"users"` → appended to base path
-* `"/users"` → **also** appended to base path (leading slash stripped)
-* `new URL("/users", origin)` → pathname appended to base path
+// Case 2: Absolute paths → replaces pathname
+new URL("/users", base)       // → "https://api.example.com/users"
 
-#### Different-Origin Requests
-
-Cross-origin URLs are **passed through unchanged**, regardless of input type:
-
-* `"https://example.com/data"` → unchanged
-* `new URL("https://example.com/data")` → unchanged
-
-This consistent behavior favors practical utility: if you're using a base URL middleware, you probably want **all** same-origin requests to use that base path.
+// Case 3: Absolute URLs with scheme → base ignored
+new URL("https://other.com/data", base)  // → "https://other.com/data"
+```
 
 ### Important Note: Trailing Slashes
 
 A trailing slash (`/`) is recommended at the end of the base URL.
-Without it, the `URL` constructor treats the final path segment as a filename and replaces it instead of appending new paths. This follows standard URL resolution behavior:
+Without it, the `URL` constructor treats the final path segment as a filename and replaces it instead of appending new paths:
 
 ```typescript
 new URL("users", "https://api.example.com/v1");  // → "https://api.example.com/users"
@@ -71,92 +86,31 @@ new URL("users", "https://api.example.com/v1/"); // → "https://api.example.com
 
 ## Usage
 
-### Basic Usage with String Inputs
+### Basic Usage
 
 ```typescript
 import { withBaseUrl } from '@qfetch/middleware-base-url';
-import { compose } from '@qfetch/core';
 
-// Create a fetch instance with a base URL
-const qfetch = compose(
-  withBaseUrl('https://api.example.com/v1/')
-)(fetch);
+const qfetch = withBaseUrl('https://api.example.com/v1/')(fetch);
 
-// Same-origin paths → all resolve against the base
+// Relative URLs → resolved against base
 await qfetch('users');  // → https://api.example.com/v1/users
-await qfetch('/users'); // → https://api.example.com/v1/users (leading slash stripped)
 
-// Different-origin URL → left unchanged
+// Absolute paths → replaces pathname (keeps protocol + host)
+await qfetch('/users'); // → https://api.example.com/users
+
+// Absolute URLs with scheme → base ignored
 await qfetch('https://external.com/data'); // → https://external.com/data
 ```
 
-### Using with URL Objects
-
-URL objects with the same origin have their paths resolved against the base:
-
-```typescript
-import { withBaseUrl } from '@qfetch/middleware-base-url';
-
-const qfetch = withBaseUrl('https://api.example.com/v1/')(fetch);
-
-// Same origin → path resolved against base
-const sameOriginUrl = new URL('/users', 'https://api.example.com');
-await qfetch(sameOriginUrl); // → https://api.example.com/v1/users
-
-// Different origin → passed through unchanged
-const differentOriginUrl = new URL('https://external.com/data');
-await qfetch(differentOriginUrl); // → https://external.com/data
-
-// Query parameters and hash are preserved
-const urlWithQuery = new URL('/users?page=1#top', 'https://api.example.com');
-await qfetch(urlWithQuery); // → https://api.example.com/v1/users?page=1#top
-```
-
-### Using with Request Objects
-
-Request objects follow the same same-origin resolution logic as URL objects:
-
-```typescript
-import { withBaseUrl } from '@qfetch/middleware-base-url';
-
-const qfetch = withBaseUrl('https://api.example.com/v1/')(fetch);
-
-// Same-origin Request → path resolved against base
-const sameOriginRequest = new Request(
-  new URL('/users', 'https://api.example.com'),
-  {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'John Doe' })
-  }
-);
-// → https://api.example.com/v1/users
-// All other properties (method, headers, body) are preserved
-await qfetch(sameOriginRequest);
-
-// Different-origin Request → passed through unchanged
-const crossOriginRequest = new Request('https://external.com/webhook', {
-  method: 'POST',
-  body: JSON.stringify({ event: 'user.created' })
-});
-await qfetch(crossOriginRequest); // → https://external.com/webhook
-```
-
-## Important Limitations
-
-> **Request Object Reconstruction**
-> `Request` objects are immutable according to the Fetch API specification. When resolving same-origin requests, new `Request` objects are created with the resolved URL. All request properties (method, headers, body, etc.) are preserved during reconstruction.
-
-> **Request Body Handling**
-> Request body streams are preserved but not cloned. The body remains consumable exactly once. For requests with non-replayable body types (like `ReadableStream`), the body will be consumed during the first attempt and cannot be retried without providing a fresh body stream.
 
 ## Notes
 
-- The middleware preserves input types (string→string, URL→URL, Request→Request) throughout the middleware chain
-- Same-origin detection is based on URL origin comparison (protocol + host + port)
-- Query parameters and URL fragments are always preserved during resolution
-- Different-origin requests bypass base URL resolution entirely
-- A trailing slash (`/`) at the end of the base URL is recommended for predictable path resolution
+- Only **string inputs** are resolved against the base URL using `new URL(input, base)`
+- URL and Request objects are passed through unchanged
+- URL resolution follows the WHATWG URL Standard
+- Query parameters and fragments are always preserved
+- A trailing slash in the base URL is recommended for predictable relative path resolution
 
 ## Standards References
 

@@ -89,7 +89,7 @@ suite("withBaseUrl - Integration", { concurrency: true }, () => {
 			);
 		});
 
-		test("resolves same-origin absolute paths against base URL", async (ctx: TestContext) => {
+		test("resolves absolute paths replacing base path", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
@@ -108,8 +108,8 @@ suite("withBaseUrl - Integration", { concurrency: true }, () => {
 			ctx.assert.strictEqual(response.status, 200, "returns successful status");
 			ctx.assert.strictEqual(
 				data.path,
-				"/api/v1/users",
-				"treats absolute path as relative to base",
+				"/users",
+				"absolute path replaces base path",
 			);
 		});
 
@@ -165,34 +165,8 @@ suite("withBaseUrl - Integration", { concurrency: true }, () => {
 		});
 	});
 
-	describe("URL inputs resolve correctly against base URL", () => {
-		test("resolves same-origin URL paths against base URL", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ path: req.url }));
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const qfetch = withBaseUrl(new URL(`${baseUrl}/api/v1/`))(fetch);
-
-			// Act
-			const response = await qfetch(new URL("users", baseUrl), {
-				signal: ctx.signal,
-			});
-			const data = (await response.json()) as { path: string };
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
-			ctx.assert.strictEqual(
-				data.path,
-				"/api/v1/users",
-				"resolves URL path correctly",
-			);
-		});
-
-		test("resolves same-origin URL with absolute path against base", async (ctx: TestContext) => {
+	describe("URL inputs are passed through unchanged", () => {
+		test("passes URL objects through unchanged", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
@@ -204,7 +178,7 @@ suite("withBaseUrl - Integration", { concurrency: true }, () => {
 			const qfetch = withBaseUrl(`${baseUrl}/api/v1/`)(fetch);
 
 			// Act
-			const response = await qfetch(new URL("/users", baseUrl), {
+			const response = await qfetch(new URL(`${baseUrl}/users`), {
 				signal: ctx.signal,
 			});
 			const data = (await response.json()) as { path: string };
@@ -213,105 +187,14 @@ suite("withBaseUrl - Integration", { concurrency: true }, () => {
 			ctx.assert.strictEqual(response.status, 200, "returns successful status");
 			ctx.assert.strictEqual(
 				data.path,
-				"/api/v1/users",
-				"treats absolute path as relative to base",
-			);
-		});
-
-		test("passes through different-origin URLs unchanged", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(1);
-			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ success: true }));
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const { baseUrl: differentOrigin } = await createTestServer(ctx, handler);
-			const qfetch = withBaseUrl(`${baseUrl}/api/`)(fetch);
-
-			// Act
-			const response = await qfetch(new URL(`${differentOrigin}/data`), {
-				signal: ctx.signal,
-			});
-
-			// Assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"successfully calls different-origin URL",
-			);
-		});
-
-		test("preserves query parameters when resolving URLs", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ path: req.url }));
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const qfetch = withBaseUrl(`${baseUrl}/api/`)(fetch);
-
-			// Act
-			const response = await qfetch(
-				new URL("/users?page=1&limit=10", baseUrl),
-				{ signal: ctx.signal },
-			);
-			const data = (await response.json()) as { path: string };
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
-			ctx.assert.strictEqual(
-				data.path,
-				"/api/users?page=1&limit=10",
-				"preserves query parameters",
-			);
-		});
-
-		test("preserves hash when resolving URLs", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-
-			// Mock fetch to capture the final URL being passed
-			const capturedUrls: string[] = [];
-			const mockFetch = ctx.mock.fn(
-				async (input: URL | RequestInfo, _init?: RequestInit) => {
-					if (input instanceof URL) {
-						capturedUrls.push(input.toString());
-					} else if (typeof input === "string") {
-						capturedUrls.push(input);
-					} else {
-						capturedUrls.push(input.url);
-					}
-					return new Response(JSON.stringify({ success: true }), {
-						status: 200,
-						headers: { "Content-Type": "application/json" },
-					});
-				},
-			);
-
-			const qfetch = withBaseUrl("http://127.0.0.1:3000/api/")(
-				mockFetch as typeof fetch,
-			);
-
-			// Act
-			const inputUrl = new URL("/users#section", "http://127.0.0.1:3000");
-			await qfetch(inputUrl, { signal: ctx.signal });
-
-			// Assert
-			ctx.assert.strictEqual(capturedUrls.length, 1, "makes one fetch call");
-			ctx.assert.strictEqual(
-				capturedUrls[0]?.includes("#section"),
-				true,
-				"preserves hash fragment in URL",
+				"/users",
+				"URL object is passed through unchanged",
 			);
 		});
 	});
 
-	describe("Request inputs resolve correctly against base URL", () => {
-		test("resolves same-origin Request paths against base URL", async (ctx: TestContext) => {
+	describe("Request inputs are passed through unchanged", () => {
+		test("passes Request objects through unchanged", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
@@ -323,7 +206,7 @@ suite("withBaseUrl - Integration", { concurrency: true }, () => {
 			const qfetch = withBaseUrl(`${baseUrl}/api/v1/`)(fetch);
 
 			// Act
-			const request = new Request(new URL("users", baseUrl), {
+			const request = new Request(`${baseUrl}/users`, {
 				signal: ctx.signal,
 			});
 			const response = await qfetch(request);
@@ -333,132 +216,8 @@ suite("withBaseUrl - Integration", { concurrency: true }, () => {
 			ctx.assert.strictEqual(response.status, 200, "returns successful status");
 			ctx.assert.strictEqual(
 				data.path,
-				"/api/v1/users",
-				"resolves Request path correctly",
-			);
-		});
-
-		test("resolves same-origin Request with absolute path against base", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ path: req.url }));
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const qfetch = withBaseUrl(`${baseUrl}/api/v1/`)(fetch);
-
-			// Act
-			const request = new Request(new URL("/users", baseUrl), {
-				signal: ctx.signal,
-			});
-			const response = await qfetch(request);
-			const data = (await response.json()) as { path: string };
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
-			ctx.assert.strictEqual(
-				data.path,
-				"/api/v1/users",
-				"treats absolute path as relative to base",
-			);
-		});
-
-		test("passes through different-origin Requests unchanged", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(1);
-			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ success: true }));
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const { baseUrl: differentOrigin } = await createTestServer(ctx, handler);
-			const qfetch = withBaseUrl(`${baseUrl}/api/`)(fetch);
-
-			// Act
-			const request = new Request(`${differentOrigin}/data`, {
-				signal: ctx.signal,
-			});
-			const response = await qfetch(request);
-
-			// Assert
-			ctx.assert.strictEqual(
-				response.status,
-				200,
-				"successfully calls different-origin URL",
-			);
-		});
-
-		test("preserves query parameters when resolving Requests", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ path: req.url }));
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const qfetch = withBaseUrl(`${baseUrl}/api/`)(fetch);
-
-			// Act
-			const request = new Request(new URL("/users?page=1", baseUrl), {
-				signal: ctx.signal,
-			});
-			const response = await qfetch(request);
-			const data = (await response.json()) as { path: string };
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
-			ctx.assert.strictEqual(
-				data.path,
-				"/api/users?page=1",
-				"preserves query parameters",
-			);
-		});
-
-		test("preserves hash when resolving Requests", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-
-			// Mock fetch to capture the final Request being passed
-			const capturedRequests: Request[] = [];
-			const mockFetch = ctx.mock.fn(
-				async (input: URL | RequestInfo, _init?: RequestInit) => {
-					if (input instanceof Request) {
-						capturedRequests.push(input);
-					}
-					return new Response(JSON.stringify({ success: true }), {
-						status: 200,
-						headers: { "Content-Type": "application/json" },
-					});
-				},
-			);
-
-			const qfetch = withBaseUrl("http://127.0.0.1:3000/api/")(
-				mockFetch as typeof fetch,
-			);
-
-			// Act
-			const request = new Request(
-				new URL("/users#section", "http://127.0.0.1:3000"),
-				{
-					signal: ctx.signal,
-				},
-			);
-			await qfetch(request);
-
-			// Assert
-			ctx.assert.strictEqual(
-				capturedRequests.length,
-				1,
-				"makes one fetch call",
-			);
-			ctx.assert.strictEqual(
-				capturedRequests[0]?.url.includes("#section"),
-				true,
-				"preserves hash fragment in Request URL",
+				"/users",
+				"Request object is passed through unchanged",
 			);
 		});
 	});
@@ -540,61 +299,6 @@ suite("withBaseUrl - Integration", { concurrency: true }, () => {
 				data,
 				{ name: "Jane Doe" },
 				"sends stream body successfully",
-			);
-		});
-
-		test("preserves all request properties when resolving Request objects", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(4);
-			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
-				let body = "";
-				req.on("data", (chunk) => {
-					body += chunk.toString();
-				});
-				req.on("end", () => {
-					res.writeHead(200, { "Content-Type": "application/json" });
-					res.end(
-						JSON.stringify({
-							method: req.method,
-							customHeader: req.headers["x-custom-header"],
-							body: JSON.parse(body),
-						}),
-					);
-				});
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const qfetch = withBaseUrl(`${baseUrl}/api/`)(fetch);
-
-			// Act
-			const request = new Request(new URL("users", baseUrl), {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"X-Custom-Header": "test-value",
-				},
-				body: JSON.stringify({ name: "Test User" }),
-				signal: ctx.signal,
-			});
-			const response = await qfetch(request);
-			const data = (await response.json()) as {
-				method: string;
-				customHeader: string;
-				body: { name: string };
-			};
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
-			ctx.assert.strictEqual(data.method, "POST", "preserves request method");
-			ctx.assert.strictEqual(
-				data.customHeader,
-				"test-value",
-				"preserves custom headers",
-			);
-			ctx.assert.deepStrictEqual(
-				data.body,
-				{ name: "Test User" },
-				"preserves request body",
 			);
 		});
 	});

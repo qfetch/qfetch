@@ -6,7 +6,17 @@ import type { Middleware } from "@qfetch/core";
  * Accepts a base URL as either a string or URL instance.
  *
  * @remarks
- * **Trailing slash recommended:** Using `"https://api.example.com/v1/"` (with trailing slash)
+ * The middleware only applies base URL resolution to **string inputs**, conforming to the URL constructor standard behavior:
+ *
+ * **String inputs (resolved using `new URL(input, base)`):**
+ * - **Relative URLs** (e.g., `"users"`) → resolved against the base URL
+ * - **Absolute paths** (e.g., `"/users"`) → replaces the base URL's pathname (keeps protocol + host from base)
+ * - **Absolute URLs with scheme** (e.g., `"https://example.com/data"`) → ignores the base URL entirely
+ *
+ * **URL and Request objects:**
+ * - Passed through unchanged, as they already contain absolute URLs
+ *
+ * **Trailing slash matters:** Using `"https://api.example.com/v1/"` (with trailing slash)
  * appends paths as expected, while `"https://api.example.com/v1"` (without trailing slash)
  * replaces the last path segment following standard URL resolution behavior.
  *
@@ -15,62 +25,43 @@ import type { Middleware } from "@qfetch/core";
 export type BaseUrlOptions = string | URL;
 
 /**
- * Middleware that resolves fetch requests against a configured base URL with consistent same-origin handling.
+ * Middleware that resolves string fetch requests against a configured base URL following standard URL constructor behavior.
  *
- * Automatically resolves request URLs against a configured base URL. All same-origin requests
- * (even those with absolute paths like `/users`) are treated as relative to the base path,
- * while different-origin requests pass through unchanged. This utility-first approach provides
- * more intuitive and consistent behavior than strict WHATWG URL Standard resolution.
+ * Automatically resolves string request URLs against a configured base URL using the WHATWG URL Standard:
+ *
+ * **String inputs (resolved using `new URL(input, base)`):**
+ * - **Relative URLs** (like `"users"`) → resolved against the base URL
+ * - **Absolute paths** (like `"/users"`) → replaces the base URL's pathname (keeps protocol + host from base)
+ * - **Absolute URLs with scheme** (like `"https://api.example.com/data"`) → ignores the base URL entirely
+ *
+ * **URL objects and Request objects:**
+ * - Passed through unchanged, as they already contain absolute URLs
  *
  * The middleware preserves input types throughout the chain: string inputs remain strings,
- * URL objects remain URLs, and Request objects remain Requests (reconstructed with new URLs).
+ * URL objects remain URLs, and Request objects remain Requests.
  *
  * @param opts - Configuration parameters. See {@link BaseUrlOptions} for details.
  *
  * @throws {TypeError} When the provided base URL is invalid or cannot be parsed.
  *
- * @example Basic usage with string inputs
+ * @example
  * ```ts
  * import { withBaseUrl } from "@qfetch/middleware-base-url";
  *
  * const qfetch = withBaseUrl("https://api.example.com/v1/")(fetch);
  *
- * // Same-origin paths - all resolve against the base
+ * // Case 1: Relative URLs - resolved against the base
  * await qfetch("users");  // → https://api.example.com/v1/users
- * await qfetch("/users"); // → https://api.example.com/v1/users (leading slash stripped)
  *
- * // Different-origin URL - left unchanged
+ * // Case 2: Absolute paths - replaces pathname (keeps protocol + host from base)
+ * await qfetch("/users"); // → https://api.example.com/users
+ *
+ * // Case 3: Absolute URLs with scheme - base is ignored entirely
  * await qfetch("https://external.com/data"); // → https://external.com/data
- * ```
  *
- * @example Using with URL objects
- * ```ts
- * import { withBaseUrl } from "@qfetch/middleware-base-url";
- *
- * const qfetch = withBaseUrl("https://api.example.com/v1/")(fetch);
- *
- * // Same origin - path resolved against base
- * const sameOriginUrl = new URL("/users", "https://api.example.com");
- * await qfetch(sameOriginUrl); // → https://api.example.com/v1/users
- *
- * // Different origin - passed through unchanged
- * const differentOriginUrl = new URL("https://external.com/data");
- * await qfetch(differentOriginUrl); // → https://external.com/data
- * ```
- *
- * @example Using with Request objects
- * ```ts
- * import { withBaseUrl } from "@qfetch/middleware-base-url";
- *
- * const qfetch = withBaseUrl("https://api.example.com/v1/")(fetch);
- *
- * // Same-origin Request - path resolved against base
- * const sameOriginRequest = new Request(
- *   new URL("/users", "https://api.example.com"),
- *   { method: "POST", body: JSON.stringify({ name: "John" }) }
- * );
- * await qfetch(sameOriginRequest); // → https://api.example.com/v1/users
- * // All other properties (method, headers, body) are preserved
+ * // URL and Request objects are passed through unchanged
+ * await qfetch(new URL("https://external.com/data")); // → https://external.com/data
+ * await qfetch(new Request("https://external.com/webhook")); // → https://external.com/webhook
  * ```
  *
  * @see {@link https://url.spec.whatwg.org/ WHATWG URL Standard}
@@ -80,56 +71,20 @@ export const withBaseUrl: Middleware<BaseUrlOptions> = (opts) => {
 	const base = new URL(opts);
 
 	return (next) => async (input, init) => {
-		// Apply base URL resolution to string, URL, and Request inputs.
+		// Only apply base URL resolution to string inputs, conforming to URL constructor standard behavior.
+		// Per WHATWG URL Standard (new URL(input, base)):
+		// - Relative URLs (e.g., "users") → resolved against base
+		// - Absolute paths (e.g., "/users") → replaces base pathname (keeps protocol + host)
+		// - Absolute URLs with scheme (e.g., "https://...") → ignores base entirely
+		// - URL and Request objects already contain absolute URLs, so pass them through unchanged
+		//
 		// Preserve the input type (string → string, URL → URL, Request → Request)
 		// to maintain type consistency throughout the middleware chain.
 		if (typeof input === "string") {
-			// Try to parse as absolute URL first
-			let url: URL;
-			try {
-				url = new URL(input);
-			} catch {
-				// Not absolute, resolve against base
-				url = new URL(input, base);
-			}
-
-			// Same-origin strings: treat pathname as relative, resolve against base path
-			// Different-origin strings: pass through unchanged (cross-origin request)
-			if (url.origin === base.origin) {
-				// Strip leading slash to force relative resolution
-				const relativePath =
-					url.pathname === input ? url.pathname.substring(1) : url.pathname;
-				input = new URL(relativePath + url.search + url.hash, base).toString();
-			} else {
-				// Different origin, use as-is
-				input = url.toString();
-			}
-		} else if (input instanceof URL) {
-			// Same-origin URLs: treat pathname as relative, resolve against base path
-			// Different-origin URLs: pass through unchanged (cross-origin request)
-			if (input.origin === base.origin) {
-				// Strip leading slash to force relative resolution
-				const relativePath = input.pathname.startsWith("/")
-					? input.pathname.substring(1)
-					: input.pathname;
-				input = new URL(relativePath + input.search + input.hash, base);
-			}
-			// else: different origin, pass through unchanged
-		} else if (input instanceof Request) {
-			const requestUrl = new URL(input.url);
-			// Same-origin Requests: treat pathname as relative, resolve against base path
-			// Different-origin Requests: pass through unchanged (cross-origin request)
-			if (requestUrl.origin === base.origin) {
-				const resolvedUrl = new URL(
-					requestUrl.pathname.substring(1) +
-						requestUrl.search +
-						requestUrl.hash,
-					base,
-				);
-				input = new Request(resolvedUrl, input);
-			}
-			// else: different origin, pass through unchanged
+			// Standard URL resolution using URL constructor with base parameter
+			input = new URL(input, base).toString();
 		}
+		// URL and Request objects are passed through unchanged
 
 		return next(input, init);
 	};
