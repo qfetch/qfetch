@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-retry-status",
-	"description": "Fetch middleware for RFC 9110-compliant status code retry handling.",
+	"description": "Fetch middleware for client-controlled retry timing based on response status codes.",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",

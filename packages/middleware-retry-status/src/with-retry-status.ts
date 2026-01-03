@@ -4,7 +4,13 @@ import type { Middleware } from "@qfetch/core";
 /**
  * Configuration options for the {@link withRetryStatus} middleware.
  *
- * Controls retry behavior for requests with retryable status codes.
+ * @remarks
+ * This middleware handles **client-controlled** retry timing. When a response has a
+ * retryable status code, the middleware uses the backoff strategy to determine wait
+ * times between attempts. Unlike `withRetryAfter`, this middleware ignores server
+ * timing directives and relies entirely on the configured strategy.
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes RFC 9110 - Status Codes}
  */
 export type RetryStatusOptions = {
 	/**
@@ -34,49 +40,32 @@ export type RetryStatusOptions = {
 };
 
 /**
- * Middleware that automatically retries HTTP requests based on response status codes.
+ * Middleware that retries requests based on response status codes.
  *
- * Retries requests that fail with specific HTTP status codes (by default `408 Request Timeout`,
- * `429 Too Many Requests`, `500 Internal Server Error`, `502 Bad Gateway`, `503 Service Unavailable`,
- * and `504 Gateway Timeout`) using configurable backoff strategies per
- * [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes).
+ * @remarks
+ * Handles **client-controlled** retry timing for transient failures. When a response
+ * has a retryable status code (by default `408`, `429`, `500`, `502`, `503`, `504`),
+ * the middleware waits according to the backoff strategy before retrying.
  *
- * The middleware waits for the strategy's backoff delay, then retries the request. Use the strategy
- * to control retry limits (strategy returns `NaN` to stop). Successful responses (2xx) and
- * non-retryable status codes are returned immediately without retrying.
+ * Unlike `withRetryAfter`, this middleware does not parse `Retry-After` headers.
+ * Use this for general retry logic; use `withRetryAfter` when server timing matters.
  *
  * @param opts - Configuration parameters. See {@link RetryStatusOptions} for details.
- * @param opts.strategy - Factory function creating a backoff strategy for retry delays.
- * @param opts.retryableStatuses - Set of HTTP status codes that trigger retries (default: `408`, `429`, `500`, `502`, `503`, `504`).
  *
  * @throws {unknown} If the request's `AbortSignal` is aborted during retry delay.
  * @throws {RangeError} If the strategy delay exceeds INT32_MAX (2147483647ms).
  *
- * @example Basic usage with default retryable statuses
+ * @example
  * ```ts
  * import { withRetryStatus } from "@qfetch/middleware-retry-status";
- * import { linear, upto } from "@proventuslabs/retry-strategies";
+ * import { fullJitter, upto } from "@proventuslabs/retry-strategies";
  *
  * const qfetch = withRetryStatus({
- *   strategy: () => upto(3, linear(1000, 10_000))
+ *   strategy: () => upto(3, fullJitter(100, 10_000))
  * })(fetch);
- *
- * const response = await qfetch("https://api.example.com/data");
  * ```
  *
- * @example Custom retryable status codes
- * ```ts
- * import { withRetryStatus } from "@qfetch/middleware-retry-status";
- * import { exponential, upto } from "@proventuslabs/retry-strategies";
- *
- * // Retry on 429, 502 (Bad Gateway), and 503 (Service Unavailable)
- * const qfetch = withRetryStatus({
- *   strategy: () => upto(3, exponential(500, 5000, 2)),
- *   retryableStatuses: new Set([429, 502, 503])
- * })(fetch);
- *
- * const response = await qfetch("https://api.example.com/data");
- * ```
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes RFC 9110 - Status Codes}
  */
 export const withRetryStatus: Middleware<RetryStatusOptions> = (opts) => {
 	// Get the set of retryable status codes, defaulting to the standard set

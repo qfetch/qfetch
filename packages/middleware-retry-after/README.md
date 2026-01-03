@@ -1,12 +1,16 @@
 # @qfetch/middleware-retry-after
 
-Fetch middleware that automatically retries requests based on server-provided `Retry-After` headers with configurable backoff strategies.
+Fetch middleware for **server-directed** retry timing based on `Retry-After` headers.
 
 ## Overview
 
-Implements automatic retry logic following [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3) and [RFC 6585 §4](https://www.rfc-editor.org/rfc/rfc6585.html#section-4) semantics for `429 (Too Many Requests)` and `503 (Service Unavailable)` responses. When the server responds with these status codes and a valid `Retry-After` header, this middleware automatically parses the delay value and retries the request.
+Respects server-provided retry timing for rate limiting and temporary unavailability. When a response includes a valid `Retry-After` header with a retryable status code (`429` or `503` by default), the middleware waits the server-specified duration before retrying.
 
-The middleware uses configurable backoff strategies from [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies) to add optional jitter to server-requested delays and control retry limits. The total wait time is the sum of the server's `Retry-After` delay plus the strategy's backoff value.
+Supports both `Retry-After` formats per [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3):
+- **Delay-seconds**: `"120"` (wait 120 seconds)
+- **HTTP-date**: `"Wed, 21 Oct 2015 07:28:00 GMT"` (wait until timestamp)
+
+Use configurable backoff strategies from [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies) to add optional jitter and control retry limits.
 
 Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
@@ -82,34 +86,6 @@ Creates a middleware that retries failed requests based on the `Retry-After` hea
 
 ## Usage
 
-### Basic usage (respect server delay exactly)
-
-```typescript
-import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { zero } from '@proventuslabs/retry-strategies';
-
-const qfetch = withRetryAfter({
-  strategy: () => zero() // No jitter, respect server delay exactly
-})(fetch);
-
-const response = await qfetch('https://api.example.com/data');
-```
-
-### With limited retries
-
-```typescript
-import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { upto, zero } from '@proventuslabs/retry-strategies';
-
-const qfetch = withRetryAfter({
-  strategy: () => upto(3, zero()) // Maximum 3 retries
-})(fetch);
-
-const response = await qfetch('https://api.example.com/data');
-```
-
-### With jitter (recommended to prevent thundering herd)
-
 ```typescript
 import { withRetryAfter } from '@qfetch/middleware-retry-after';
 import { fullJitter, upto } from '@proventuslabs/retry-strategies';
@@ -118,43 +94,19 @@ const qfetch = withRetryAfter({
   strategy: () => upto(3, fullJitter(100, 10_000))
 })(fetch);
 
-const response = await qfetch('https://api.example.com/data');
-```
-
-### With custom retryable status codes
-
-```typescript
-import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { fullJitter, upto } from '@proventuslabs/retry-strategies';
-
-// Retry on 429 (Too Many Requests), 502 (Bad Gateway), and 520 (Cloudflare Unknown Error)
-const qfetch = withRetryAfter({
-  strategy: () => upto(3, fullJitter(100, 10_000)),
-  retryableStatuses: new Set([429, 502, 520])
-})(fetch);
-
-const response = await qfetch('https://api.example.com/data');
-```
-
-### With maximum server delay constraint
-
-```typescript
-import { withRetryAfter } from '@qfetch/middleware-retry-after';
-import { fullJitter, upto } from '@proventuslabs/retry-strategies';
-
-const qfetch = withRetryAfter({
-  strategy: () => upto(3, fullJitter(100, 10_000)),
-  maxServerDelay: 120_000 // Maximum 2 minutes delay
-})(fetch);
-
-const response = await qfetch('https://api.example.com/data');
+await qfetch('https://api.example.com/data');
 ```
 
 ## Notes
 
-- Requests are retried with the exact same parameters (URL, method, headers, body, etc.)
+- Only retries when a valid `Retry-After` header is present (invalid or missing headers are passed through)
+- Total wait time = server's `Retry-After` delay + strategy backoff value
+- Use `zero()` to respect server delays exactly; use `fullJitter()` to add jitter and prevent thundering herd
+- Use `upto()` wrapper to limit retry attempts
 - Response bodies are automatically cancelled before retrying to prevent memory leaks
-- By default, the middleware only retries on `429` and `503` status codes with valid `Retry-After` headers (customizable via `retryableStatuses` option)
-- Use the `zero()` strategy to respect server delays exactly without adding jitter
-- Use the `upto()` wrapper to limit the number of retry attempts
-- See [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies) for available backoff strategies
+
+## Standards References
+
+- [RFC 9110 §10.2.3 - Retry-After](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3) - Defines `Retry-After` header format and semantics
+- [RFC 6585 §4 - 429 Too Many Requests](https://www.rfc-editor.org/rfc/rfc6585.html#section-4) - Rate limiting status code
+- [RFC 9110 §15.6.4 - 503 Service Unavailable](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.4) - Temporary unavailability status code
