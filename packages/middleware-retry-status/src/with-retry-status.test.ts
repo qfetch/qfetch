@@ -6,7 +6,7 @@ import { withRetryStatus } from "./with-retry-status.ts";
 
 /* node:coverage disable */
 
-suite("withRetryStatus - unit middleware", () => {
+suite("withRetryStatus - Unit", () => {
 	describe("retry mechanism is skipped for successful or non-retryable responses", () => {
 		test("completes without retrying on successful status", async (ctx: TestContext) => {
 			// Arrange
@@ -299,7 +299,7 @@ suite("withRetryStatus - unit middleware", () => {
 			);
 		});
 
-		test("does not retry when strategy returns NaN on first check", async (ctx: TestContext) => {
+		test("does not retry when strategy signals exhaustion immediately", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });

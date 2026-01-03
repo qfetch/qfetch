@@ -212,8 +212,8 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 		});
 	});
 
-	describe("INT32_MAX boundary tests", () => {
-		test("rejects with range error when delay exceeds INT32_MAX", async (ctx: TestContext) => {
+	describe("maximum delay boundary tests", () => {
+		test("rejects when delay exceeds maximum safe timeout", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {

@@ -53,7 +53,7 @@ export type RetryStatusOptions = {
  * @param opts - Configuration parameters. See {@link RetryStatusOptions} for details.
  *
  * @throws {unknown} If the request's `AbortSignal` is aborted during retry delay.
- * @throws {RangeError} If the strategy delay exceeds INT32_MAX (2147483647ms).
+ * @throws {RangeError} If the strategy delay exceeds maximum safe timeout (~24.8 days).
  *
  * @example
  * ```ts

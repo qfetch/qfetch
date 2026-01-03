@@ -6,7 +6,7 @@ import { withRetryAfter } from "./with-retry-after.ts";
 
 /* node:coverage disable */
 
-suite("withRetryAfter - unit middleware", () => {
+suite("withRetryAfter - Unit", () => {
 	describe("retry mechanism is skipped for successful or invalid responses", () => {
 		test("completes without retrying on successful status", async (ctx: TestContext) => {
 			ctx.plan(2);
@@ -373,7 +373,7 @@ suite("withRetryAfter - unit middleware", () => {
 			);
 
 			await ctx.test(
-				"handles maximum allowed INT32_MAX equivalent in seconds",
+				"handles maximum safe timeout value in seconds",
 				async (ctx: TestContext) => {
 					// Arrange
 					ctx.plan(3);
@@ -413,7 +413,7 @@ suite("withRetryAfter - unit middleware", () => {
 					ctx.assert.strictEqual(
 						fetchMock.mock.callCount(),
 						2,
-						"retries after INT32_MAX delay",
+						"retries after maximum safe delay",
 					);
 					ctx.assert.strictEqual(body, "ok", "returns successful response");
 				},
@@ -536,7 +536,7 @@ suite("withRetryAfter - unit middleware", () => {
 			);
 
 			await ctx.test(
-				"handles maximum allowed INT32_MAX equivalent in HTTP-date",
+				"handles maximum safe timeout value in HTTP-date",
 				async (ctx: TestContext) => {
 					// Arrange
 					ctx.plan(3);
@@ -583,7 +583,7 @@ suite("withRetryAfter - unit middleware", () => {
 					ctx.assert.strictEqual(
 						fetchMock.mock.callCount(),
 						2,
-						"retries after INT32_MAX delay",
+						"retries after maximum safe delay",
 					);
 					ctx.assert.strictEqual(body, "ok", "returns successful response");
 				},
@@ -779,7 +779,7 @@ suite("withRetryAfter - unit middleware", () => {
 			);
 		});
 
-		test("does not retry when strategy returns NaN on first check", async (ctx: TestContext) => {
+		test("does not retry when strategy signals exhaustion immediately", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -810,7 +810,7 @@ suite("withRetryAfter - unit middleware", () => {
 			ctx.assert.strictEqual(body, "not ok", "returns initial error response");
 		});
 
-		test("uses INT32_MAX server delay without adding extra backoff delay", async (ctx: TestContext) => {
+		test("uses maximum safe server delay without adding extra backoff", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -839,7 +839,7 @@ suite("withRetryAfter - unit middleware", () => {
 			ctx.assert.strictEqual(
 				fetchMock.mock.callCount(),
 				2,
-				"retries after INT32_MAX without extra backoff",
+				"retries after maximum safe delay without extra backoff",
 			);
 			ctx.assert.strictEqual(
 				fetchMock.mock.calls[1]?.arguments[0],
@@ -1124,7 +1124,7 @@ suite("withRetryAfter - unit middleware", () => {
 				ctx.assert.strictEqual(body, "ok", "returns successful response");
 			});
 
-			await ctx.test("NaN maxServerDelay", async (ctx: TestContext) => {
+			await ctx.test("invalid maxServerDelay", async (ctx: TestContext) => {
 				// Arrange
 				ctx.plan(3);
 				ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -1166,13 +1166,13 @@ suite("withRetryAfter - unit middleware", () => {
 				ctx.assert.strictEqual(
 					fetchMock.mock.callCount(),
 					2,
-					"retries after 10 seconds with NaN max",
+					"retries after 10 seconds with invalid max",
 				);
 				ctx.assert.strictEqual(body, "ok", "returns successful response");
 			});
 		});
 
-		test("rejects with range error when total delay exceeds INT32_MAX (2147483647ms)", async (ctx: TestContext) => {
+		test("rejects when total delay exceeds maximum safe timeout", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -1199,7 +1199,7 @@ suite("withRetryAfter - unit middleware", () => {
 			await ctx.assert.rejects(
 				() => responsePromise,
 				(e: unknown) => e instanceof RangeError,
-				"throws RangeError when delay exceeds INT32_MAX",
+				"throws RangeError when delay exceeds safe limit",
 			);
 			ctx.assert.strictEqual(fetchMock.mock.callCount(), 1, "does not retry");
 		});

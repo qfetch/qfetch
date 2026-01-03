@@ -64,7 +64,7 @@ export type RetryAfterOptions = {
  *
  * @throws {DOMException} `ConstraintError` when server delay exceeds `maxServerDelay`.
  * @throws {unknown} If the request's `AbortSignal` is aborted during retry delay.
- * @throws {RangeError} If total delay exceeds INT32_MAX (2147483647ms).
+ * @throws {RangeError} If total delay exceeds maximum safe timeout (~24.8 days).
  *
  * @example
  * ```ts
