@@ -1,29 +1,12 @@
 import { describe, suite, type TestContext, test } from "node:test";
 
-import type { BackoffStrategy } from "@proventuslabs/retry-strategies";
+import { createStrategyMock, flushMicrotasks } from "@qfetch/test-utils";
 
 import { withRetryAfter } from "./with-retry-after.ts";
 
 /* node:coverage disable */
 
-// Helper to flush microtasks for predictable async behavior
-const flushMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
-
-// Mock strategy factory for testing
-const strategyMock = (ctx: TestContext, delays: number[]) => {
-	return ctx.mock.fn<() => BackoffStrategy>(() => {
-		let callCount = 0;
-		return {
-			nextBackoff: ctx.mock.fn(() => {
-				const delay = delays.at(callCount++);
-				return delay ?? Number.NaN;
-			}),
-			resetBackoff: ctx.mock.fn(() => {}),
-		};
-	});
-};
-
-suite("withRetryAfter - unit middleware", () => {
+suite("withRetryAfter - Unit", () => {
 	describe("retry mechanism is skipped for successful or invalid responses", () => {
 		test("completes without retrying on successful status", async (ctx: TestContext) => {
 			ctx.plan(2);
@@ -38,7 +21,7 @@ suite("withRetryAfter - unit middleware", () => {
 						async () => new Response("ok", { status: 200 }),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [1000]),
+						strategy: createStrategyMock(ctx, [1000]),
 					})(fetchMock);
 
 					// Act
@@ -67,7 +50,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [1000]),
+					strategy: createStrategyMock(ctx, [1000]),
 				})(fetchMock);
 
 				// Act
@@ -92,7 +75,7 @@ suite("withRetryAfter - unit middleware", () => {
 				async () => new Response("not ok", { status: 404 }),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 			})(fetchMock);
 
 			// Act
@@ -116,7 +99,7 @@ suite("withRetryAfter - unit middleware", () => {
 				async () => new Response("not ok", { status: 429 }),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 			})(fetchMock);
 
 			// Act
@@ -147,7 +130,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [1000]),
+					strategy: createStrategyMock(ctx, [1000]),
 				})(fetchMock);
 
 				// Act
@@ -171,7 +154,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [1000]),
+					strategy: createStrategyMock(ctx, [1000]),
 				})(fetchMock);
 
 				// Act
@@ -195,7 +178,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [1000]),
+					strategy: createStrategyMock(ctx, [1000]),
 				})(fetchMock);
 
 				// Act
@@ -219,7 +202,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [1000]),
+					strategy: createStrategyMock(ctx, [1000]),
 				})(fetchMock);
 
 				// Act
@@ -243,7 +226,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [1000]),
+					strategy: createStrategyMock(ctx, [1000]),
 				})(fetchMock);
 
 				// Act
@@ -267,7 +250,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [1000]),
+					strategy: createStrategyMock(ctx, [1000]),
 				})(fetchMock);
 
 				// Act
@@ -310,7 +293,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0, 0, 0]),
+						strategy: createStrategyMock(ctx, [0, 0, 0]),
 					})(fetchMock);
 
 					// Act
@@ -358,7 +341,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0, 0, 0]),
+						strategy: createStrategyMock(ctx, [0, 0, 0]),
 					})(fetchMock);
 
 					// Act
@@ -390,7 +373,7 @@ suite("withRetryAfter - unit middleware", () => {
 			);
 
 			await ctx.test(
-				"handles maximum allowed INT32_MAX equivalent in seconds",
+				"handles maximum safe timeout value in seconds",
 				async (ctx: TestContext) => {
 					// Arrange
 					ctx.plan(3);
@@ -406,7 +389,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0]),
+						strategy: createStrategyMock(ctx, [0]),
 					})(fetchMock);
 
 					// Act
@@ -430,7 +413,7 @@ suite("withRetryAfter - unit middleware", () => {
 					ctx.assert.strictEqual(
 						fetchMock.mock.callCount(),
 						2,
-						"retries after INT32_MAX delay",
+						"retries after maximum safe delay",
 					);
 					ctx.assert.strictEqual(body, "ok", "returns successful response");
 				},
@@ -469,7 +452,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0, 0, 0]),
+						strategy: createStrategyMock(ctx, [0, 0, 0]),
 					})(fetchMock);
 
 					// Act
@@ -521,7 +504,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0, 0, 0]),
+						strategy: createStrategyMock(ctx, [0, 0, 0]),
 					})(fetchMock);
 
 					// Act
@@ -553,7 +536,7 @@ suite("withRetryAfter - unit middleware", () => {
 			);
 
 			await ctx.test(
-				"handles maximum allowed INT32_MAX equivalent in HTTP-date",
+				"handles maximum safe timeout value in HTTP-date",
 				async (ctx: TestContext) => {
 					// Arrange
 					ctx.plan(3);
@@ -576,7 +559,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0]),
+						strategy: createStrategyMock(ctx, [0]),
 					})(fetchMock);
 
 					// Act
@@ -600,7 +583,7 @@ suite("withRetryAfter - unit middleware", () => {
 					ctx.assert.strictEqual(
 						fetchMock.mock.callCount(),
 						2,
-						"retries after INT32_MAX delay",
+						"retries after maximum safe delay",
 					);
 					ctx.assert.strictEqual(body, "ok", "returns successful response");
 				},
@@ -623,7 +606,7 @@ suite("withRetryAfter - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0, 0]),
 			})(fetchMock);
 
 			// Act
@@ -646,7 +629,7 @@ suite("withRetryAfter - unit middleware", () => {
 			ctx.plan(1);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 
-			const strategyFactory = ctx.mock.fn(strategyMock(ctx, [0]));
+			const strategyFactory = ctx.mock.fn(createStrategyMock(ctx, [0]));
 
 			const fetchMock = ctx.mock.fn(
 				fetch,
@@ -693,7 +676,7 @@ suite("withRetryAfter - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [5_000, Number.NaN]), // 5 second backoff
+				strategy: createStrategyMock(ctx, [5_000, Number.NaN]), // 5 second backoff
 			})(fetchMock);
 
 			// Act
@@ -737,7 +720,7 @@ suite("withRetryAfter - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, Number.NaN]),
+				strategy: createStrategyMock(ctx, [0, Number.NaN]),
 			})(fetchMock);
 
 			// Act
@@ -772,7 +755,7 @@ suite("withRetryAfter - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, Number.NaN]),
+				strategy: createStrategyMock(ctx, [0, Number.NaN]),
 			})(fetchMock);
 
 			// Act
@@ -796,7 +779,7 @@ suite("withRetryAfter - unit middleware", () => {
 			);
 		});
 
-		test("does not retry when strategy returns NaN on first check", async (ctx: TestContext) => {
+		test("does not retry when strategy signals exhaustion immediately", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -812,7 +795,7 @@ suite("withRetryAfter - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [Number.NaN]),
+				strategy: createStrategyMock(ctx, [Number.NaN]),
 			})(fetchMock);
 
 			// Act
@@ -827,7 +810,7 @@ suite("withRetryAfter - unit middleware", () => {
 			ctx.assert.strictEqual(body, "not ok", "returns initial error response");
 		});
 
-		test("uses INT32_MAX server delay without adding extra backoff delay", async (ctx: TestContext) => {
+		test("uses maximum safe server delay without adding extra backoff", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -843,7 +826,7 @@ suite("withRetryAfter - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, Number.NaN]),
+				strategy: createStrategyMock(ctx, [0, Number.NaN]),
 			})(fetchMock);
 
 			// Act
@@ -856,7 +839,7 @@ suite("withRetryAfter - unit middleware", () => {
 			ctx.assert.strictEqual(
 				fetchMock.mock.callCount(),
 				2,
-				"retries after INT32_MAX without extra backoff",
+				"retries after maximum safe delay without extra backoff",
 			);
 			ctx.assert.strictEqual(
 				fetchMock.mock.calls[1]?.arguments[0],
@@ -895,7 +878,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0, 0, 0]),
+						strategy: createStrategyMock(ctx, [0, 0, 0]),
 						maxServerDelay: 20_000,
 					})(fetchMock);
 
@@ -933,7 +916,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0, 0, 0]),
+						strategy: createStrategyMock(ctx, [0, 0, 0]),
 						maxServerDelay: 5_000,
 					})(fetchMock);
 
@@ -973,7 +956,7 @@ suite("withRetryAfter - unit middleware", () => {
 							}),
 					);
 					const qfetch = withRetryAfter({
-						strategy: strategyMock(ctx, [0, 0, 0]),
+						strategy: createStrategyMock(ctx, [0, 0, 0]),
 						maxServerDelay: 0,
 					})(fetchMock);
 
@@ -1016,7 +999,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [0, 0, 0]),
+					strategy: createStrategyMock(ctx, [0, 0, 0]),
 				})(fetchMock);
 
 				// Act
@@ -1062,7 +1045,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [0, 0, 0]),
+					strategy: createStrategyMock(ctx, [0, 0, 0]),
 					maxServerDelay: -100,
 				})(fetchMock);
 
@@ -1109,7 +1092,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [0, 0, 0]),
+					strategy: createStrategyMock(ctx, [0, 0, 0]),
 					// biome-ignore lint/suspicious/noExplicitAny: testing invalid input
 					maxServerDelay: "invalid" as any,
 				})(fetchMock);
@@ -1141,7 +1124,7 @@ suite("withRetryAfter - unit middleware", () => {
 				ctx.assert.strictEqual(body, "ok", "returns successful response");
 			});
 
-			await ctx.test("NaN maxServerDelay", async (ctx: TestContext) => {
+			await ctx.test("invalid maxServerDelay", async (ctx: TestContext) => {
 				// Arrange
 				ctx.plan(3);
 				ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -1157,7 +1140,7 @@ suite("withRetryAfter - unit middleware", () => {
 						}),
 				);
 				const qfetch = withRetryAfter({
-					strategy: strategyMock(ctx, [0, 0, 0]),
+					strategy: createStrategyMock(ctx, [0, 0, 0]),
 					maxServerDelay: Number.NaN,
 				})(fetchMock);
 
@@ -1183,13 +1166,13 @@ suite("withRetryAfter - unit middleware", () => {
 				ctx.assert.strictEqual(
 					fetchMock.mock.callCount(),
 					2,
-					"retries after 10 seconds with NaN max",
+					"retries after 10 seconds with invalid max",
 				);
 				ctx.assert.strictEqual(body, "ok", "returns successful response");
 			});
 		});
 
-		test("rejects with range error when total delay exceeds INT32_MAX (2147483647ms)", async (ctx: TestContext) => {
+		test("rejects when total delay exceeds maximum safe timeout", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -1205,7 +1188,7 @@ suite("withRetryAfter - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0, 0]),
 			})(fetchMock);
 
 			// Act
@@ -1216,7 +1199,7 @@ suite("withRetryAfter - unit middleware", () => {
 			await ctx.assert.rejects(
 				() => responsePromise,
 				(e: unknown) => e instanceof RangeError,
-				"throws RangeError when delay exceeds INT32_MAX",
+				"throws RangeError when delay exceeds safe limit",
 			);
 			ctx.assert.strictEqual(fetchMock.mock.callCount(), 1, "does not retry");
 		});
@@ -1249,7 +1232,7 @@ suite("withRetryAfter - unit middleware", () => {
 			);
 
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0, 0]),
 			})(fetchMock);
 
 			// Act
@@ -1299,7 +1282,7 @@ suite("withRetryAfter - unit middleware", () => {
 			);
 
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0, 0]),
 			})(fetchMock);
 
 			// Act
@@ -1342,7 +1325,7 @@ suite("withRetryAfter - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0, 0]),
 			})(fetchMock);
 
 			// Act
@@ -1378,7 +1361,7 @@ suite("withRetryAfter - unit middleware", () => {
 			const controller = new AbortController();
 
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0, 0]),
 			})(fetchMock);
 
 			// Act
@@ -1430,7 +1413,7 @@ suite("withRetryAfter - unit middleware", () => {
 			});
 
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0, 0]),
 			})(fetchMock);
 
 			// Act
@@ -1483,7 +1466,7 @@ suite("withRetryAfter - unit middleware", () => {
 						);
 
 						const qfetch = withRetryAfter({
-							strategy: strategyMock(ctx, [0, 0]),
+							strategy: createStrategyMock(ctx, [0, 0]),
 							retryableStatuses: new Set([429, 502, 520]),
 						})(fetchMock);
 
@@ -1522,7 +1505,7 @@ suite("withRetryAfter - unit middleware", () => {
 
 			// No custom status codes provided
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0]),
 			})(fetchMock);
 
 			// Act
@@ -1558,7 +1541,7 @@ suite("withRetryAfter - unit middleware", () => {
 
 			// Empty set means no retries on any status code
 			const qfetch = withRetryAfter({
-				strategy: strategyMock(ctx, [0, 0]),
+				strategy: createStrategyMock(ctx, [0, 0]),
 				retryableStatuses: new Set(),
 			})(fetchMock);
 

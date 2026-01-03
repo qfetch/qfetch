@@ -1,65 +1,13 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { createServer, type Server } from "node:http";
 import { describe, suite, type TestContext, test } from "node:test";
 
 import { fullJitter, upto, zero } from "@proventuslabs/retry-strategies";
+import { createTestServer, type RequestHandler } from "@qfetch/test-utils";
 
 import { withRetryAfter } from "./with-retry-after.ts";
 
 /* node:coverage disable */
 
-interface ServerContext {
-	server: Server;
-	baseUrl: string;
-}
-
-type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void;
-
 suite("withRetryAfter - Integration", { concurrency: true }, () => {
-	/**
-	 * Creates an isolated HTTP server for a single test.
-	 * Each test gets its own server on a random port to enable concurrent execution.
-	 */
-	const createTestServer = async (
-		ctx: TestContext,
-		handler?: RequestHandler,
-	): Promise<ServerContext> => {
-		const server = createServer((req, res) => {
-			if (handler) {
-				handler(req, res);
-				return;
-			}
-
-			// Default handler
-			res.writeHead(200, { "Content-Type": "application/json" });
-			res.end(JSON.stringify({ message: "Success!" }));
-		});
-
-		const baseUrl = await new Promise<string>((resolve, reject) => {
-			server.listen(0, "127.0.0.1", () => {
-				const address = server.address();
-				if (address && typeof address === "object") {
-					resolve(`http://127.0.0.1:${address.port}`);
-				} else {
-					reject(new Error("Failed to get server address"));
-				}
-			});
-
-			server.on("error", reject);
-		});
-
-		ctx.after(() => {
-			return new Promise<void>((resolve) => {
-				server.close(() => resolve());
-			});
-		});
-
-		return {
-			server,
-			baseUrl,
-		};
-	};
-
 	describe("successful responses", () => {
 		test("completes without retrying on successful response", async (ctx: TestContext) => {
 			// Arrange
@@ -264,8 +212,8 @@ suite("withRetryAfter - Integration", { concurrency: true }, () => {
 		});
 	});
 
-	describe("INT32_MAX boundary tests", () => {
-		test("rejects with range error when delay exceeds INT32_MAX", async (ctx: TestContext) => {
+	describe("maximum delay boundary tests", () => {
+		test("rejects when delay exceeds maximum safe timeout", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
 			const handler = ctx.mock.fn<RequestHandler>((_req, res) => {

@@ -1,68 +1,33 @@
-import { createServer, type Server } from "node:http";
 import { describe, suite, test, type TestContext } from "node:test";
+
+import { createTestServer } from "@qfetch/test-utils";
 
 import { with{{pascalCase middlewareName}} } from "./with-{{kebabCase middlewareName}}.ts";
 
 /* node:coverage disable */
 
-interface ServerContext {
-	server: Server;
-	baseUrl: string;
-}
-
 suite("with{{pascalCase middlewareName}} - Integration", { concurrency: true }, () => {
-	/**
-	 * Creates an isolated HTTP server for a single test.
-	 * Each test gets its own server on a random port to enable concurrent execution.
-	 */
-	const createTestServer = async (
-		ctx: TestContext,
-	): Promise<ServerContext> => {
-		const server = createServer((req, res) => {
-			const url = new URL(req.url || "/", "http://localhost");
-			const path = url.pathname;
-
-			// TODO: Add route handlers for your middleware's behavior
-
-			if (path === "/success") {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Success!" }));
-				return;
-			}
-
-			res.writeHead(404, { "Content-Type": "application/json" });
-			res.end(JSON.stringify({ error: "Not Found" }));
-		});
-
-		const baseUrl = await new Promise<string>((resolve, reject) => {
-			server.listen(0, "127.0.0.1", () => {
-				const address = server.address();
-				if (address && typeof address === "object") {
-					resolve(`http://127.0.0.1:${address.port}`);
-				} else {
-					reject(new Error("Failed to get server address"));
-				}
-			});
-
-			server.on("error", reject);
-		});
-
-		ctx.after(() => {
-			return new Promise<void>((resolve) => {
-				server.close(() => resolve());
-			});
-		});
-
-		return { server, baseUrl };
-	};
-
 	// TODO: Add integration tests for your middleware
 
 	describe("behavior description from user perspective", () => {
 		test("handles successful requests", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const { baseUrl } = await createTestServer(ctx);
+			const { baseUrl } = await createTestServer(ctx, (req, res) => {
+				const url = new URL(req.url || "/", "http://localhost");
+				const path = url.pathname;
+
+				// TODO: Add route handlers for your middleware's behavior
+
+				if (path === "/success") {
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ message: "Success!" }));
+					return;
+				}
+
+				res.writeHead(404, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ error: "Not Found" }));
+			});
 			const qfetch = with{{pascalCase middlewareName}}()(fetch);
 
 			// Act

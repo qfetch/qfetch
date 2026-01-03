@@ -57,36 +57,7 @@ The middleware only applies base URL resolution to **string inputs**, following 
 - **Type preservation** - Input types are preserved (string→string, URL→URL, Request→Request)
 - **Query parameters and fragments** - Always preserved during URL resolution
 
-### URL Resolution Reference
-
-String inputs follow the URL constructor standard behavior: `new URL(input, base)`
-
-```typescript
-const base = "https://api.example.com/v1/";
-
-// Case 1: Relative URLs → resolved against base
-new URL("users", base)        // → "https://api.example.com/v1/users"
-
-// Case 2: Absolute paths → replaces pathname
-new URL("/users", base)       // → "https://api.example.com/users"
-
-// Case 3: Absolute URLs with scheme → base ignored
-new URL("https://other.com/data", base)  // → "https://other.com/data"
-```
-
-### Important Note: Trailing Slashes
-
-A trailing slash (`/`) is recommended at the end of the base URL.
-Without it, the `URL` constructor treats the final path segment as a filename and replaces it instead of appending new paths:
-
-```typescript
-new URL("users", "https://api.example.com/v1");  // → "https://api.example.com/users"
-new URL("users", "https://api.example.com/v1/"); // → "https://api.example.com/v1/users"
-```
-
 ## Usage
-
-### Basic Usage
 
 ```typescript
 import { withBaseUrl } from '@qfetch/middleware-base-url';
@@ -106,11 +77,10 @@ await qfetch('https://external.com/data'); // → https://external.com/data
 
 ## Notes
 
-- Only **string inputs** are resolved against the base URL using `new URL(input, base)`
-- URL and Request objects are passed through unchanged
-- URL resolution follows the WHATWG URL Standard
+- Only **string inputs** are resolved; `URL` and `Request` objects pass through unchanged
+- Resolution follows WHATWG URL Standard: `new URL(input, base)`
+- Trailing slash recommended: `"v1/"` appends paths, `"v1"` replaces the last segment
 - Query parameters and fragments are always preserved
-- A trailing slash in the base URL is recommended for predictable relative path resolution
 
 ## Standards References
 

@@ -1,10 +1,14 @@
 # @qfetch/middleware-retry-status
 
-Fetch middleware that automatically retries requests based on response status codes with configurable backoff strategies.
+Fetch middleware for **client-controlled** retry timing based on response status codes.
 
 ## Overview
 
-Implements automatic retry logic following [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes) semantics for transient error responses. When a request fails with a retryable status code (by default `408`, `429`, `500`, `502`, `503`, `504`), this middleware automatically retries using configurable backoff strategies from [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies).
+Retries transient failures using configurable backoff strategies. When a response has a retryable status code (by default `408`, `429`, `500`, `502`, `503`, `504`), the middleware waits according to the strategy before retrying.
+
+Unlike `@qfetch/middleware-retry-after`, this middleware does **not** parse `Retry-After` headers—retry timing is entirely client-controlled via the backoff strategy. Use this for general retry logic; use `middleware-retry-after` when server timing directives should be respected.
+
+Use configurable backoff strategies from [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies) to control delay patterns (linear, exponential, jitter) and retry limits.
 
 Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
@@ -67,34 +71,6 @@ Creates a middleware that retries failed requests based on response status codes
 
 ## Usage
 
-### Basic usage with linear backoff
-
-```typescript
-import { withRetryStatus } from '@qfetch/middleware-retry-status';
-import { linear, upto } from '@proventuslabs/retry-strategies';
-
-const qfetch = withRetryStatus({
-  strategy: () => upto(3, linear(1000, 10_000)) // Maximum 3 retries
-})(fetch);
-
-const response = await qfetch('https://api.example.com/data');
-```
-
-### With exponential backoff
-
-```typescript
-import { withRetryStatus } from '@qfetch/middleware-retry-status';
-import { exponential, upto } from '@proventuslabs/retry-strategies';
-
-const qfetch = withRetryStatus({
-  strategy: () => upto(5, exponential(500, 30_000, 2)) // Maximum 5 retries, doubling delay
-})(fetch);
-
-const response = await qfetch('https://api.example.com/data');
-```
-
-### With jitter (recommended to prevent thundering herd)
-
 ```typescript
 import { withRetryStatus } from '@qfetch/middleware-retry-status';
 import { fullJitter, upto } from '@proventuslabs/retry-strategies';
@@ -103,29 +79,19 @@ const qfetch = withRetryStatus({
   strategy: () => upto(3, fullJitter(100, 10_000))
 })(fetch);
 
-const response = await qfetch('https://api.example.com/data');
-```
-
-### With custom retryable status codes
-
-```typescript
-import { withRetryStatus } from '@qfetch/middleware-retry-status';
-import { linear, upto } from '@proventuslabs/retry-strategies';
-
-// Only retry on rate limits and gateway errors
-const qfetch = withRetryStatus({
-  strategy: () => upto(3, linear(1000, 10_000)),
-  retryableStatuses: new Set([429, 502, 503])
-})(fetch);
-
-const response = await qfetch('https://api.example.com/data');
+await qfetch('https://api.example.com/data');
 ```
 
 ## Notes
 
-- Requests are retried with the exact same parameters (URL, method, headers, body, etc.)
+- Does **not** parse `Retry-After` headers—use `@qfetch/middleware-retry-after` for server-directed timing
+- Retries on `408`, `429`, `500`, `502`, `503`, `504` by default (customizable via `retryableStatuses`)
+- Use `linear()`, `exponential()`, or `fullJitter()` strategies for different backoff patterns
+- Use `upto()` wrapper to limit retry attempts
 - Response bodies are automatically cancelled before retrying to prevent memory leaks
-- By default, the middleware retries on `408`, `429`, `500`, `502`, `503`, and `504` status codes (customizable via `retryableStatuses` option)
-- Use the `upto()` wrapper to limit the number of retry attempts
-- This middleware does **not** automatically respect `Retry-After` headers - use `@qfetch/middleware-retry-after` for that behavior
-- See [`@proventuslabs/retry-strategies`](https://jsr.io/@proventuslabs/retry-strategies) for available backoff strategies
+
+## Standards References
+
+- [RFC 9110 - Status Codes](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes) - HTTP status code definitions
+- [RFC 9110 §15.5.9 - 408 Request Timeout](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.9) - Client timeout status
+- [RFC 9110 §15.6 - Server Error 5xx](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6) - Server error status codes

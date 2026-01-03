@@ -4,7 +4,13 @@ import type { Middleware } from "@qfetch/core";
 /**
  * Configuration options for the {@link withRetryAfter} middleware.
  *
- * Controls retry behavior for requests with `429` or `503` responses that include a `Retry-After` header.
+ * @remarks
+ * This middleware handles **server-directed** retry timing. When a server responds with
+ * `429` or `503` and a valid `Retry-After` header, the middleware waits the specified
+ * duration before retrying. The backoff strategy adds optional jitter on top of the
+ * server-requested delay.
+ *
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 - Retry-After}
  */
 export type RetryAfterOptions = {
 	/**
@@ -44,52 +50,33 @@ export type RetryAfterOptions = {
 };
 
 /**
- * Middleware that automatically retries HTTP requests based on server-provided `Retry-After` headers.
+ * Middleware that retries requests based on server-provided `Retry-After` headers.
  *
- * Retries requests that fail with specific HTTP status codes (by default `429 Too Many Requests` or
- * `503 Service Unavailable`) when a valid `Retry-After` header is present. Supports both delay-seconds
- * (`"120"`) and HTTP-date formats (`"Wed, 21 Oct 2015 07:28:00 GMT"`) per
- * [RFC 9110 §10.2.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3).
+ * @remarks
+ * Handles **server-directed** retry timing for rate limiting and temporary unavailability.
+ * When a retryable response includes a valid `Retry-After` header, the middleware parses
+ * the delay (supporting both `delay-seconds` and `HTTP-date` formats per RFC 9110) and
+ * waits before retrying. The total wait time is `Retry-After + strategy backoff`.
  *
- * The middleware waits for the server-requested delay plus optional strategy backoff, then retries
- * the request. Use the strategy to add jitter and control retry limits (strategy returns `NaN` to stop).
- * Responses without `Retry-After` headers or with invalid values are returned immediately without retrying.
+ * Responses without `Retry-After` headers or with invalid values are returned as-is.
  *
  * @param opts - Configuration parameters. See {@link RetryAfterOptions} for details.
- * @param opts.strategy - Factory function creating a backoff strategy for retry delays.
- * @param opts.maxServerDelay - Maximum delay in milliseconds accepted from server (default: unlimited).
- * @param opts.retryableStatuses - Set of HTTP status codes that trigger retries (default: `429`, `503`).
  *
  * @throws {DOMException} `ConstraintError` when server delay exceeds `maxServerDelay`.
  * @throws {unknown} If the request's `AbortSignal` is aborted during retry delay.
- * @throws {RangeError} If total delay exceeds INT32_MAX (2147483647ms).
+ * @throws {RangeError} If total delay exceeds maximum safe timeout (~24.8 days).
  *
- * @example Basic usage with default retryable statuses (429, 503)
+ * @example
  * ```ts
  * import { withRetryAfter } from "@qfetch/middleware-retry-after";
  * import { fullJitter, upto } from "@proventuslabs/retry-strategies";
  *
  * const qfetch = withRetryAfter({
- *   strategy: () => upto(3, fullJitter(100, 10_000)),
- *   maxServerDelay: 120_000 // 2 minutes max
+ *   strategy: () => upto(3, fullJitter(100, 10_000))
  * })(fetch);
- *
- * const response = await qfetch("https://api.example.com/data");
  * ```
  *
- * @example Custom retryable status codes
- * ```ts
- * import { withRetryAfter } from "@qfetch/middleware-retry-after";
- * import { fullJitter, upto } from "@proventuslabs/retry-strategies";
- *
- * // Retry on 429, 502 (Bad Gateway), and 520 (Cloudflare Unknown Error)
- * const qfetch = withRetryAfter({
- *   strategy: () => upto(3, fullJitter(100, 10_000)),
- *   retryableStatuses: new Set([429, 502, 520])
- * })(fetch);
- *
- * const response = await qfetch("https://api.example.com/data");
- * ```
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 - Retry-After}
  */
 export const withRetryAfter: Middleware<RetryAfterOptions> = (opts) => {
 	const maxServerDelay =

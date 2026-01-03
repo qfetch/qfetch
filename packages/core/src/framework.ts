@@ -1,40 +1,45 @@
 /**
- * A function signature compatible with the native fetch API
+ * A function signature compatible with the native fetch API.
+ *
+ * @remarks
+ * This type alias represents any function that conforms to the standard `fetch` signature,
+ * accepting a `RequestInfo | URL` input and optional `RequestInit`, returning a `Promise<Response>`.
+ *
+ * @see {@link https://fetch.spec.whatwg.org/#fetch-method Fetch Standard}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch MDN: fetch()}
  */
 export type FetchFunction = typeof fetch;
 
 /**
- * A function that wraps a fetch function with middleware logic
+ * A function that wraps a fetch function with middleware logic.
+ *
+ * @remarks
+ * Executors form the building blocks of the middleware chain. Each executor receives
+ * the next function in the chain and returns a new fetch function with its logic applied.
+ * This pattern enables request/response interception, transformation, and error handling.
+ *
  * @param next - The next fetch function in the middleware chain
  * @returns A new fetch function with the middleware applied
  */
 export type FetchExecutor = (next: FetchFunction) => FetchFunction;
 
 /**
- * A middleware factory that creates a MiddlewareExecutor
- * - If no options are needed, returns a function that creates the executor
- * - If options are optional, accepts an optional parameter
- * - If options are required, requires the parameter
+ * A middleware factory that creates a {@link FetchExecutor}.
+ *
+ * @remarks
+ * The generic parameter `T` controls option handling:
+ * - `Middleware` (no generic) - no options, call with `()`
+ * - `Middleware<T>` - required options
+ * - `Middleware<T | undefined>` - optional options
  *
  * @template T - The type of options the middleware accepts
+ *
  * @example
- * ```typescript
- * // No options middleware
+ * ```ts
  * const withLogger: Middleware = () => (next) => (input, init) => {
- *   console.log('Request:', input);
+ *   console.log("Request:", input);
  *   return next(input, init);
  * };
- *
- * // With options middleware
- * const withRetry: Middleware<{ maxRetries: number }> = (opts) => (next) =>
- *   async (input, init) => {
- *     let response: Response;
- *     let attempt = 1;
- *     do {
- *       response = await next(input, init);
- *     } while (!response.ok && attempt++ <= opts.maxRetries);
- *     return response;
- *   };
  * ```
  */
 export type Middleware<T = never> = [T] extends [never]
@@ -44,23 +49,20 @@ export type Middleware<T = never> = [T] extends [never]
 		: (opts: T) => FetchExecutor;
 
 /**
- * Composes multiple middleware executors into a single fetch function,
- * but applies them in right-to-left order (composition style).
+ * Composes middleware executors in right-to-left order (functional composition).
  *
- * This means the last middleware in the list receives the request first
- * and is closest to the base fetch, wrapping back to the first middleware.
+ * @remarks
+ * The last middleware listed wraps outermost (runs first on request, last on response).
+ * Request flow: last middleware → ... → first middleware → fetch.
+ * Response flow: fetch → first middleware → ... → last middleware.
  *
  * @param middlewares - Array of middleware executors to compose
  * @returns A function that takes a base fetch and returns the composed fetch function
  *
  * @example
- * ```typescript
- * const qfetch = compose(
- *   withLogger(),
- *   withRetry({ maxRetries: 3 })
- * )(fetch);
- *
- * // retries -> logs
+ * ```ts
+ * const qfetch = compose(withRetry(), withLogger())(fetch);
+ * // Request: logger → retry → fetch
  * ```
  */
 export const compose = (...middlewares: FetchExecutor[]): FetchExecutor => {
@@ -71,23 +73,20 @@ export const compose = (...middlewares: FetchExecutor[]): FetchExecutor => {
 };
 
 /**
- * Composes multiple middleware executors into a single fetch function,
- * but applies them in left-to-right order (pipeline style).
+ * Composes middleware executors in left-to-right order (pipeline style).
  *
- * This means the first middleware receives the request first,
- * and the last middleware wraps closest to the base fetch.
+ * @remarks
+ * The first middleware listed wraps outermost (runs first on request, last on response).
+ * Request flow: first middleware → ... → last middleware → fetch.
+ * Response flow: fetch → last middleware → ... → first middleware.
  *
  * @param middlewares - Array of middleware executors to compose
  * @returns A function that takes a base fetch and returns the pipelined fetch function
  *
  * @example
- * ```typescript
- * const qfetch = pipeline(
- *   withRetry({ maxRetries: 3 }),
- *   withLogger()
- * )(fetch);
- *
- * // retries -> logs
+ * ```ts
+ * const qfetch = pipeline(withLogger(), withRetry())(fetch);
+ * // Request: logger → retry → fetch
  * ```
  */
 export const pipeline = (...middlewares: FetchExecutor[]): FetchExecutor => {

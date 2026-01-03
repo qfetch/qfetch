@@ -41,6 +41,9 @@ importers:
 
   packages/core:
     devDependencies:
+      '@qfetch/test-utils':
+        specifier: 'workspace:'
+        version: link:../test-utils
       tsdown:
         specifier: 'catalog:'
         version: 0.15.12(typescript@5.9.3)
@@ -53,6 +56,9 @@ importers:
       '@qfetch/core':
         specifier: 'workspace:'
         version: link:../core
+      '@qfetch/test-utils':
+        specifier: 'workspace:'
+        version: link:../test-utils
       tsdown:
         specifier: 'catalog:'
         version: 0.15.12(typescript@5.9.3)
@@ -69,6 +75,9 @@ importers:
       '@qfetch/core':
         specifier: 'workspace:'
         version: link:../core
+      '@qfetch/test-utils':
+        specifier: 'workspace:'
+        version: link:../test-utils
       tsdown:
         specifier: 'catalog:'
         version: 0.15.12(typescript@5.9.3)
@@ -85,9 +94,21 @@ importers:
       '@qfetch/core':
         specifier: 'workspace:'
         version: link:../core
+      '@qfetch/test-utils':
+        specifier: 'workspace:'
+        version: link:../test-utils
       tsdown:
         specifier: 'catalog:'
         version: 0.15.12(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/test-utils:
+    devDependencies:
+      '@proventuslabs/retry-strategies':
+        specifier: ^0.1
+        version: 0.1.2
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

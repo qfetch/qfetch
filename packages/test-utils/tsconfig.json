@@ -1,0 +1,8 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": "src",
+		"isolatedDeclarations": false // we are not publishing this package
+	},
+	"include": ["src/**/*"]
+}

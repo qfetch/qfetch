@@ -1,29 +1,12 @@
 import { describe, suite, type TestContext, test } from "node:test";
 
-import type { BackoffStrategy } from "@proventuslabs/retry-strategies";
+import { createStrategyMock, flushMicrotasks } from "@qfetch/test-utils";
 
 import { withRetryStatus } from "./with-retry-status.ts";
 
 /* node:coverage disable */
 
-// Helper to flush microtasks for predictable async behavior
-const flushMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
-
-// Mock strategy factory for testing
-const strategyMock = (ctx: TestContext, delays: number[]) => {
-	return ctx.mock.fn<() => BackoffStrategy>(() => {
-		let callCount = 0;
-		return {
-			nextBackoff: ctx.mock.fn(() => {
-				const delay = delays.at(callCount++);
-				return delay ?? Number.NaN;
-			}),
-			resetBackoff: ctx.mock.fn(() => {}),
-		};
-	});
-};
-
-suite("withRetryStatus - unit middleware", () => {
+suite("withRetryStatus - Unit", () => {
 	describe("retry mechanism is skipped for successful or non-retryable responses", () => {
 		test("completes without retrying on successful status", async (ctx: TestContext) => {
 			// Arrange
@@ -33,7 +16,7 @@ suite("withRetryStatus - unit middleware", () => {
 				async () => new Response("ok", { status: 200 }),
 			);
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 			})(fetchMock);
 
 			// Act
@@ -63,7 +46,7 @@ suite("withRetryStatus - unit middleware", () => {
 						async () => new Response(null, { status }),
 					);
 					const qfetch = withRetryStatus({
-						strategy: strategyMock(ctx, [1000]),
+						strategy: createStrategyMock(ctx, [1000]),
 					})(fetchMock);
 
 					// Act
@@ -87,7 +70,7 @@ suite("withRetryStatus - unit middleware", () => {
 				async () => new Response("not found", { status: 404 }),
 			);
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 			})(fetchMock);
 
 			// Act
@@ -116,7 +99,7 @@ suite("withRetryStatus - unit middleware", () => {
 						async () => new Response(null, { status }),
 					);
 					const qfetch = withRetryStatus({
-						strategy: strategyMock(ctx, [1000]),
+						strategy: createStrategyMock(ctx, [1000]),
 					})(fetchMock);
 
 					// Act
@@ -146,7 +129,7 @@ suite("withRetryStatus - unit middleware", () => {
 				async () => new Response("error", { status: 500 }),
 			);
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000, 2000]),
+				strategy: createStrategyMock(ctx, [1000, 2000]),
 			})(fetchMock);
 
 			// Act
@@ -180,7 +163,7 @@ suite("withRetryStatus - unit middleware", () => {
 						async () => new Response(null, { status }),
 					);
 					const qfetch = withRetryStatus({
-						strategy: strategyMock(ctx, [1000]),
+						strategy: createStrategyMock(ctx, [1000]),
 					})(fetchMock);
 
 					// Act
@@ -214,7 +197,7 @@ suite("withRetryStatus - unit middleware", () => {
 			});
 
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000, 2000, 3000]),
+				strategy: createStrategyMock(ctx, [1000, 2000, 3000]),
 			})(fetchMock);
 
 			// Act
@@ -247,7 +230,7 @@ suite("withRetryStatus - unit middleware", () => {
 			ctx.plan(1);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
 
-			const strategyFactory = ctx.mock.fn(strategyMock(ctx, [1000]));
+			const strategyFactory = ctx.mock.fn(createStrategyMock(ctx, [1000]));
 
 			const fetchMock = ctx.mock.fn(
 				fetch,
@@ -290,7 +273,7 @@ suite("withRetryStatus - unit middleware", () => {
 					}),
 			);
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000, 2000, Number.NaN]),
+				strategy: createStrategyMock(ctx, [1000, 2000, Number.NaN]),
 			})(fetchMock);
 
 			// Act
@@ -316,7 +299,7 @@ suite("withRetryStatus - unit middleware", () => {
 			);
 		});
 
-		test("does not retry when strategy returns NaN on first check", async (ctx: TestContext) => {
+		test("does not retry when strategy signals exhaustion immediately", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			ctx.mock.timers.enable({ apis: ["setTimeout"] });
@@ -325,7 +308,7 @@ suite("withRetryStatus - unit middleware", () => {
 				async () => new Response("not ok", { status: 503 }),
 			);
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [Number.NaN]),
+				strategy: createStrategyMock(ctx, [Number.NaN]),
 			})(fetchMock);
 
 			// Act
@@ -354,7 +337,7 @@ suite("withRetryStatus - unit middleware", () => {
 				async () => new Response(null, { status: 503 }),
 			);
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [5000]), // 5 second delay
+				strategy: createStrategyMock(ctx, [5000]), // 5 second delay
 			})(fetchMock);
 
 			// Act
@@ -393,7 +376,7 @@ suite("withRetryStatus - unit middleware", () => {
 				async () => new Response(null, { status: 500 }),
 			);
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000, 2000, 3000, Number.NaN]),
+				strategy: createStrategyMock(ctx, [1000, 2000, 3000, Number.NaN]),
 			})(fetchMock);
 
 			// Act
@@ -438,7 +421,7 @@ suite("withRetryStatus - unit middleware", () => {
 			);
 
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 			})(fetchMock);
 
 			// Act
@@ -484,7 +467,7 @@ suite("withRetryStatus - unit middleware", () => {
 			);
 
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 			})(fetchMock);
 
 			// Act
@@ -523,7 +506,7 @@ suite("withRetryStatus - unit middleware", () => {
 				async () => new Response(null, { status: 500 }),
 			);
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 			})(fetchMock);
 
 			// Act
@@ -555,7 +538,7 @@ suite("withRetryStatus - unit middleware", () => {
 			const controller = new AbortController();
 
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [5000]),
+				strategy: createStrategyMock(ctx, [5000]),
 			})(fetchMock);
 
 			// Act
@@ -603,7 +586,7 @@ suite("withRetryStatus - unit middleware", () => {
 			});
 
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [5000]),
+				strategy: createStrategyMock(ctx, [5000]),
 			})(fetchMock);
 
 			// Act
@@ -655,7 +638,7 @@ suite("withRetryStatus - unit middleware", () => {
 								}),
 						);
 						const qfetch = withRetryStatus({
-							strategy: strategyMock(ctx, [1000]),
+							strategy: createStrategyMock(ctx, [1000]),
 							retryableStatuses: new Set([429, 502, 520]),
 						})(fetchMock);
 
@@ -690,7 +673,7 @@ suite("withRetryStatus - unit middleware", () => {
 
 			// No custom status codes provided
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 			})(fetchMock);
 
 			// Act
@@ -725,7 +708,7 @@ suite("withRetryStatus - unit middleware", () => {
 
 			// Empty set means no retries on any status code
 			const qfetch = withRetryStatus({
-				strategy: strategyMock(ctx, [1000]),
+				strategy: createStrategyMock(ctx, [1000]),
 				retryableStatuses: new Set(),
 			})(fetchMock);
 

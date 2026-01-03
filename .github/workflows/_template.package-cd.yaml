@@ -46,7 +46,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --filter=${{ inputs.package_name }}
+        run: pnpm install --filter=${{ inputs.package_name }}...
 
       - name: Build package
         run: pnpm build --filter=${{ inputs.package_name }}
@@ -93,7 +93,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        run: pnpm install --filter=${{ inputs.package_name }}
+        run: pnpm install --filter=${{ inputs.package_name }}...
 
       - name: Build package
         run: pnpm build --filter=${{ inputs.package_name }}

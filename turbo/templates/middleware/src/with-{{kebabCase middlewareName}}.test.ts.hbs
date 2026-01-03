@@ -1,11 +1,11 @@
 import { describe, suite, test, type TestContext } from "node:test";
 
+// import { flushMicrotasks } from "@qfetch/test-utils";
+
 import { type {{pascalCase middlewareName}}Options, with{{pascalCase middlewareName}} } from "./with-{{kebabCase middlewareName}}.ts";
 
 /* node:coverage disable */
 suite("with{{pascalCase middlewareName}} - Unit", () => {
-	// Helper function example: use for common test utilities
-	// Example: const flushMicrotasks = () => new Promise((resolve) => setImmediate(resolve));
 
 	describe("behavior description from user perspective", () => {
 		test("expected observable behavior", async (ctx: TestContext) => {

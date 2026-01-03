@@ -2,7 +2,7 @@ import { defineConfig } from "tsdown";
 
 export default defineConfig([
 	{
-		globalName: "QFetch",
+		globalName: "QFC",
 		platform: "neutral",
 		target: "es2020",
 		format: ["cjs", "esm", "iife"],

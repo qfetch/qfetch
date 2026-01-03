@@ -1,69 +1,12 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { createServer, type Server } from "node:http";
 import { describe, suite, type TestContext, test } from "node:test";
+
+import { createTestServer, type RequestHandler } from "@qfetch/test-utils";
 
 import { withBaseUrl } from "./with-base-url.ts";
 
 /* node:coverage disable */
 
-interface ServerContext {
-	server: Server;
-	baseUrl: string;
-}
-
-type RequestHandler = (req: IncomingMessage, res: ServerResponse) => void;
-
 suite("withBaseUrl - Integration", { concurrency: true }, () => {
-	/**
-	 * Creates an isolated HTTP server for a single test.
-	 * Each test gets its own server on a random port to enable concurrent execution.
-	 */
-	const createTestServer = async (
-		ctx: TestContext,
-		handler?: RequestHandler,
-	): Promise<ServerContext> => {
-		const server = createServer((req, res) => {
-			if (handler) {
-				handler(req, res);
-				return;
-			}
-
-			// Default handler - echo back request body or return success
-			let body = "";
-			req.on("data", (chunk) => {
-				body += chunk.toString();
-			});
-			req.on("end", () => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(body || JSON.stringify({ success: true }));
-			});
-		});
-
-		const baseUrl = await new Promise<string>((resolve, reject) => {
-			server.listen(0, "127.0.0.1", () => {
-				const address = server.address();
-				if (address && typeof address === "object") {
-					resolve(`http://127.0.0.1:${address.port}`);
-				} else {
-					reject(new Error("Failed to get server address"));
-				}
-			});
-
-			server.on("error", reject);
-		});
-
-		ctx.after(() => {
-			return new Promise<void>((resolve) => {
-				server.close(() => resolve());
-			});
-		});
-
-		return {
-			server,
-			baseUrl,
-		};
-	};
-
 	describe("string inputs resolve correctly against base URL", () => {
 		test("resolves relative paths against base URL", async (ctx: TestContext) => {
 			// Arrange
