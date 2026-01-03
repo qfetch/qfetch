@@ -1,69 +1,38 @@
-import { createServer, type Server } from "node:http";
 import { describe, suite, type TestContext, test } from "node:test";
+
+import { createTestServer, type RequestHandler } from "@qfetch/test-utils";
 
 import { compose, type FetchExecutor, pipeline } from "./framework.ts";
 
 /* node:coverage disable */
 
-interface ServerContext {
-	server: Server;
-	baseUrl: string;
-}
-
 suite("framework - Integration", { concurrency: true }, () => {
-	/**
-	 * Creates an isolated HTTP server for a single test.
-	 * Each test gets its own server on a random port to enable concurrent execution.
-	 */
-	const createTestServer = async (ctx: TestContext): Promise<ServerContext> => {
-		const server = createServer((req, res) => {
-			const url = new URL(req.url || "/", "http://localhost");
-			const path = url.pathname;
+	const frameworkTestHandler: RequestHandler = (req, res) => {
+		const url = new URL(req.url || "/", "http://localhost");
+		const path = url.pathname;
 
-			if (path === "/success") {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ message: "Success!" }));
-				return;
-			}
+		if (path === "/success") {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ message: "Success!" }));
+			return;
+		}
 
-			if (path === "/echo-headers") {
-				const customHeader = req.headers["x-custom-header"] || null;
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ customHeader }));
-				return;
-			}
+		if (path === "/echo-headers") {
+			const customHeader = req.headers["x-custom-header"] || null;
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ customHeader }));
+			return;
+		}
 
-			res.writeHead(404, { "Content-Type": "application/json" });
-			res.end(JSON.stringify({ error: "Not Found" }));
-		});
-
-		const baseUrl = await new Promise<string>((resolve, reject) => {
-			server.listen(0, "127.0.0.1", () => {
-				const address = server.address();
-				if (address && typeof address === "object") {
-					resolve(`http://127.0.0.1:${address.port}`);
-				} else {
-					reject(new Error("Failed to get server address"));
-				}
-			});
-
-			server.on("error", reject);
-		});
-
-		ctx.after(() => {
-			return new Promise<void>((resolve) => {
-				server.close(() => resolve());
-			});
-		});
-
-		return { server, baseUrl };
+		res.writeHead(404, { "Content-Type": "application/json" });
+		res.end(JSON.stringify({ error: "Not Found" }));
 	};
 
 	describe("compose", () => {
 		test("applies middleware in right-to-left order with real fetch", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx);
+			const { baseUrl } = await createTestServer(ctx, frameworkTestHandler);
 
 			const calls: string[] = [];
 
@@ -101,7 +70,7 @@ suite("framework - Integration", { concurrency: true }, () => {
 		test("modifies request headers before sending", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx);
+			const { baseUrl } = await createTestServer(ctx, frameworkTestHandler);
 
 			const addHeader: FetchExecutor = (next) => async (input, init) => {
 				const headers = new Headers(init?.headers);
@@ -129,7 +98,7 @@ suite("framework - Integration", { concurrency: true }, () => {
 		test("works with no middleware", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx);
+			const { baseUrl } = await createTestServer(ctx, frameworkTestHandler);
 			const qfetch = compose()(fetch);
 
 			// Act
@@ -152,7 +121,7 @@ suite("framework - Integration", { concurrency: true }, () => {
 		test("applies middleware in left-to-right order with real fetch", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx);
+			const { baseUrl } = await createTestServer(ctx, frameworkTestHandler);
 
 			const calls: string[] = [];
 
@@ -190,7 +159,7 @@ suite("framework - Integration", { concurrency: true }, () => {
 		test("modifies request headers before sending", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx);
+			const { baseUrl } = await createTestServer(ctx, frameworkTestHandler);
 
 			const addHeader: FetchExecutor = (next) => async (input, init) => {
 				const headers = new Headers(init?.headers);
@@ -218,7 +187,7 @@ suite("framework - Integration", { concurrency: true }, () => {
 		test("works with no middleware", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const { baseUrl } = await createTestServer(ctx);
+			const { baseUrl } = await createTestServer(ctx, frameworkTestHandler);
 			const qfetch = pipeline()(fetch);
 
 			// Act
