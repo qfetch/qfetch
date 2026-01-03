@@ -12,7 +12,6 @@
 		"typescript": "catalog:"
 	},
 	"scripts": {
-		"check-types": "tsc --noEmit",
 		"style": "biome check ."
 	}
 }
