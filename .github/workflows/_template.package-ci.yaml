@@ -42,7 +42,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm i --filter=${{ inputs.package_name }}
+        run: pnpm i --filter=${{ inputs.package_name }}...
 
       - name: Style
         run: pnpm style --filter=${{ inputs.package_name }}
