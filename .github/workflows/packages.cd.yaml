@@ -26,7 +26,8 @@ jobs:
       "packages/middleware-retry-status--release_created": ${{ steps.release.outputs['packages/middleware-retry-status--release_created'] }}
       "packages/middleware-base-url--tag_name": ${{ steps.release.outputs['packages/middleware-base-url--tag_name'] }}
       "packages/middleware-base-url--release_created": ${{ steps.release.outputs['packages/middleware-base-url--release_created'] }}
-      # Add more outputs for other packages here
+      "packages/middleware-cookies--tag_name": ${{ steps.release.outputs['packages/middleware-cookies--tag_name'] }}
+      "packages/middleware-cookies--release_created": ${{ steps.release.outputs['packages/middleware-cookies--release_created'] }}
 
     steps:
       - uses: googleapis/release-please-action@v4
@@ -76,3 +77,12 @@ jobs:
       package_path: "packages/middleware-base-url"
       package_name: "@qfetch/middleware-base-url"
       package_tag: ${{ needs.release-please.outputs['packages/middleware-base-url--tag_name'] }}
+
+  middleware-cookies:
+    needs: release-please
+    if: ${{ needs.release-please.outputs['packages/middleware-cookies--release_created'] == 'true' }}
+    uses: ./.github/workflows/_template.package-cd.yaml
+    with:
+      package_path: "packages/middleware-cookies"
+      package_name: "@qfetch/middleware-cookies"
+      package_tag: ${{ needs.release-please.outputs['packages/middleware-cookies--tag_name'] }}

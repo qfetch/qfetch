@@ -43,6 +43,15 @@
 					"jsonpath": "$.version"
 				}
 			]
+		},
+		"packages/middleware-cookies": {
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "jsr.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }
