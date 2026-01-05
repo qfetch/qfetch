@@ -337,7 +337,10 @@ export const withQueryParams: Middleware<
 	const arrayFormat = options?.arrayFormat ?? "repeat";
 
 	// Fast path: empty params (checked at creation time, not per-request)
-	const isParamsEmpty = Object.keys(params).length === 0;
+	const isParamsEmpty =
+		!params ||
+		params.constructor !== Object ||
+		Object.keys(params).length === 0;
 	if (isParamsEmpty) {
 		return (next) => (input, init) => next(input, init);
 	}
