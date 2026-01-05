@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-cookies",
-	"description": "Fetch middleware for setting cookies on outgoing requests",
+	"description": "Fetch middleware for setting cookies on outgoing requests.",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
