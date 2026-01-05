@@ -203,6 +203,109 @@ suite("withQueryParam - Unit", () => {
 			);
 		});
 	});
+
+	describe("array values with repeat format (default)", () => {
+		test("repeats key for each array value", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const fetchMock = ctx.mock.fn(fetch, async (input) => {
+				ctx.assert.ok(typeof input === "string", "input is a string");
+				ctx.assert.equal(
+					input,
+					"https://example.com/posts?tags=foo&tags=bar",
+					"array values use repeated keys",
+				);
+				return new Response();
+			});
+
+			const qfetch = withQueryParam("tags", ["foo", "bar"])(fetchMock);
+
+			// Act
+			await qfetch("https://example.com/posts");
+		});
+
+		test("skips empty arrays", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const fetchMock = ctx.mock.fn(fetch, async (input) => {
+				ctx.assert.ok(typeof input === "string", "input is a string");
+				ctx.assert.equal(
+					input,
+					"https://example.com/posts",
+					"empty array adds nothing",
+				);
+				return new Response();
+			});
+
+			const qfetch = withQueryParam("tags", [])(fetchMock);
+
+			// Act
+			await qfetch("https://example.com/posts");
+		});
+
+		test("handles single-element array", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const fetchMock = ctx.mock.fn(fetch, async (input) => {
+				ctx.assert.ok(typeof input === "string", "input is a string");
+				ctx.assert.equal(
+					input,
+					"https://example.com/posts?tags=single",
+					"single-element array works",
+				);
+				return new Response();
+			});
+
+			const qfetch = withQueryParam("tags", ["single"])(fetchMock);
+
+			// Act
+			await qfetch("https://example.com/posts");
+		});
+	});
+
+	describe("array values with brackets format", () => {
+		test("appends brackets to key for array values", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const fetchMock = ctx.mock.fn(fetch, async (input) => {
+				ctx.assert.ok(typeof input === "string", "input is a string");
+				ctx.assert.equal(
+					input,
+					"https://example.com/posts?tags%5B%5D=foo&tags%5B%5D=bar",
+					"array values use bracket notation",
+				);
+				return new Response();
+			});
+
+			const qfetch = withQueryParam("tags", ["foo", "bar"], {
+				arrayFormat: "brackets",
+			})(fetchMock);
+
+			// Act
+			await qfetch("https://example.com/posts");
+		});
+
+		test("string values unchanged with brackets option", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const fetchMock = ctx.mock.fn(fetch, async (input) => {
+				ctx.assert.ok(typeof input === "string", "input is a string");
+				ctx.assert.equal(
+					input,
+					"https://example.com/posts?page=1",
+					"string values unaffected by arrayFormat",
+				);
+				return new Response();
+			});
+
+			const qfetch = withQueryParam("page", "1", {
+				arrayFormat: "brackets",
+			})(fetchMock);
+
+			// Act
+			await qfetch("https://example.com/posts");
+		});
+	});
 });
 
 suite("withQueryParams - Unit", () => {

@@ -115,6 +115,84 @@ suite("withQueryParam - Integration", { concurrency: true }, () => {
 			);
 		});
 	});
+
+	describe("array values are handled correctly", () => {
+		test("sends repeated keys for array values (default)", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
+				const url = new URL(req.url || "/", "http://localhost");
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ tags: url.searchParams.getAll("tags") }));
+			});
+
+			const { baseUrl } = await createTestServer(ctx, handler);
+			const qfetch = withQueryParam("tags", ["foo", "bar"])(fetch);
+
+			// Act
+			const response = await qfetch(`${baseUrl}/posts`, { signal: ctx.signal });
+			const data = (await response.json()) as { tags: string[] };
+
+			// Assert
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.deepStrictEqual(
+				data.tags,
+				["foo", "bar"],
+				"server receives array as repeated keys",
+			);
+		});
+
+		test("sends bracket notation for array values", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
+				const url = new URL(req.url || "/", "http://localhost");
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ tags: url.searchParams.getAll("tags[]") }));
+			});
+
+			const { baseUrl } = await createTestServer(ctx, handler);
+			const qfetch = withQueryParam("tags", ["foo", "bar"], {
+				arrayFormat: "brackets",
+			})(fetch);
+
+			// Act
+			const response = await qfetch(`${baseUrl}/posts`, { signal: ctx.signal });
+			const data = (await response.json()) as { tags: string[] };
+
+			// Assert
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.deepStrictEqual(
+				data.tags,
+				["foo", "bar"],
+				"server receives array with bracket notation",
+			);
+		});
+
+		test("skips empty arrays", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(2);
+			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ url: req.url }));
+			});
+
+			const { baseUrl } = await createTestServer(ctx, handler);
+			const qfetch = withQueryParam("tags", [])(fetch);
+
+			// Act
+			const response = await qfetch(`${baseUrl}/posts`, { signal: ctx.signal });
+			const data = (await response.json()) as { url: string };
+
+			// Assert
+			ctx.assert.strictEqual(response.status, 200, "returns successful status");
+			ctx.assert.strictEqual(
+				data.url,
+				"/posts",
+				"empty array not included in URL",
+			);
+		});
+	});
 });
 
 suite("withQueryParams - Integration", { concurrency: true }, () => {
