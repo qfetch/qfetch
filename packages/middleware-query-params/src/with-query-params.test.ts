@@ -63,15 +63,15 @@ suite("withQueryParam - Unit", () => {
 			await qfetch("/api/users#section");
 		});
 
-		test("merges with existing query params", async (ctx: TestContext) => {
+		test("merges with existing query params (request takes precedence)", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
 				ctx.assert.ok(typeof input === "string", "input is a string");
 				ctx.assert.equal(
 					input,
-					"https://example.com/users?existing=yes&page=1",
-					"new param is appended to existing",
+					"https://example.com/users?page=1&existing=yes",
+					"middleware param first, request param after",
 				);
 				return new Response();
 			});
@@ -82,15 +82,15 @@ suite("withQueryParam - Unit", () => {
 			await qfetch("https://example.com/users?existing=yes");
 		});
 
-		test("allows duplicate keys", async (ctx: TestContext) => {
+		test("request params take precedence over middleware params", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
 				ctx.assert.ok(typeof input === "string", "input is a string");
 				ctx.assert.equal(
 					input,
-					"https://example.com/users?page=1&page=2",
-					"duplicate key is appended",
+					"https://example.com/users?page=2&page=1",
+					"middleware param first, request param after (takes precedence)",
 				);
 				return new Response();
 			});
@@ -348,15 +348,15 @@ suite("withQueryParams - Unit", () => {
 			await qfetch("https://example.com/users");
 		});
 
-		test("merges with existing query params", async (ctx: TestContext) => {
+		test("merges with existing query params (request takes precedence)", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const fetchMock = ctx.mock.fn(fetch, async (input) => {
 				ctx.assert.ok(typeof input === "string", "input is a string");
 				ctx.assert.equal(
 					input,
-					"https://example.com/users?existing=yes&page=1&limit=10",
-					"new params merged with existing",
+					"https://example.com/users?page=1&limit=10&existing=yes",
+					"middleware params first, request params after",
 				);
 				return new Response();
 			});

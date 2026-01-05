@@ -105,61 +105,46 @@ const getUrlString = (input: RequestInfo | URL): string => {
 };
 
 /**
- * Appends query parameters to a URL's searchParams.
+ * Merges middleware params with request params, giving request params precedence.
+ * Middleware params are set first, then request params are appended.
  *
- * @param searchParams - The URLSearchParams to modify
- * @param params - The parameters to append
+ * @param searchParams - The URLSearchParams to modify (will be cleared and rebuilt)
+ * @param middlewareParams - The middleware parameters to set as defaults
  * @param arrayFormat - How to format array values
  */
-const appendParams = (
+const mergeParams = (
 	searchParams: URLSearchParams,
-	params: QueryParamEntries,
+	middlewareParams: QueryParamEntries,
 	arrayFormat: "repeat" | "brackets",
 ): void => {
-	for (const [name, value] of Object.entries(params)) {
-		if (Array.isArray(value)) {
-			if (value.length === 0) continue;
-			const key = arrayFormat === "brackets" ? `${name}[]` : name;
-			for (const v of value) {
-				searchParams.append(key, v);
-			}
-		} else {
-			searchParams.append(name, value);
-		}
-	}
-};
+	// Save existing request params
+	const requestParams = [...searchParams.entries()];
 
-/**
- * Appends a single query parameter value to URLSearchParams.
- *
- * @param searchParams - The URLSearchParams to modify
- * @param name - The parameter name
- * @param value - The parameter value (string or array)
- * @param arrayFormat - How to format array values
- */
-const appendParam = (
-	searchParams: URLSearchParams,
-	name: string,
-	value: QueryParamValue,
-	arrayFormat: "repeat" | "brackets",
-): void => {
-	if (Array.isArray(value)) {
-		if (value.length === 0) return;
-		const key = arrayFormat === "brackets" ? `${name}[]` : name;
-		for (const v of value) {
+	// Clear searchParams
+	requestParams.forEach(([key]) => void searchParams.delete(key));
+
+	// Set middleware params first
+	for (const [name, value] of Object.entries(middlewareParams)) {
+		const values = Array.isArray(value) ? value : [value];
+		if (values.length === 0) continue;
+		const key =
+			Array.isArray(value) && arrayFormat === "brackets" ? `${name}[]` : name;
+		for (const v of values) {
 			searchParams.append(key, v);
 		}
-	} else {
-		searchParams.append(name, value);
+	}
+
+	// Append request params (takes precedence by appearing later)
+	for (const [key, value] of requestParams) {
+		searchParams.append(key, value);
 	}
 };
 
 /**
  * Middleware that adds a single query parameter to outgoing fetch requests.
  *
- * Appends a query parameter to the URL of outgoing requests. If the URL
- * already has query parameters, the new parameter is appended to the existing
- * ones.
+ * Sets a default query parameter on outgoing requests. Request parameters
+ * take precedence over middleware parameters when both exist.
  *
  * @remarks
  * **URL encoding:** Values are encoded using the standard URLSearchParams API,
@@ -171,9 +156,9 @@ const appendParam = (
  * - Empty arrays are skipped entirely
  *
  * **Merge behavior:**
- * - If no query string exists → sets `?name=value`
- * - If query string exists → appends `&name=value`
- * - Duplicate keys are allowed (both values are kept)
+ * - Middleware params are set first as defaults
+ * - Request params are appended after (taking precedence)
+ * - Both values are kept when keys overlap (request value appears later)
  *
  * **Input handling:**
  * - **String inputs:** Returns modified string (preserves relative/absolute)
@@ -241,7 +226,7 @@ export const withQueryParam: Middleware<
 		const urlString = getUrlString(input);
 		const { url, isRelative } = parseUrl(urlString);
 
-		appendParam(url.searchParams, name, value, arrayFormat);
+		mergeParams(url.searchParams, { [name]: value }, arrayFormat);
 
 		if (input instanceof Request) {
 			const newUrl = reconstructUrl(url, isRelative);
@@ -259,9 +244,8 @@ export const withQueryParam: Middleware<
 /**
  * Middleware that adds multiple query parameters to outgoing fetch requests.
  *
- * Appends multiple query parameters to the URL of outgoing requests. If the
- * URL already has query parameters, new parameters are appended to the
- * existing ones.
+ * Sets default query parameters on outgoing requests. Request parameters
+ * take precedence over middleware parameters when both exist.
  *
  * @remarks
  * **URL encoding:** Values are encoded using the standard URLSearchParams API,
@@ -273,9 +257,9 @@ export const withQueryParam: Middleware<
  * - Empty arrays are skipped entirely
  *
  * **Merge behavior:**
- * - Existing query parameters are preserved
- * - New parameters are appended
- * - Duplicate keys are allowed (both values are kept)
+ * - Middleware params are set first as defaults
+ * - Request params are appended after (taking precedence)
+ * - Both values are kept when keys overlap (request value appears later)
  * - Empty params object `{}` passes request through unchanged
  *
  * **Input handling:**
@@ -362,7 +346,7 @@ export const withQueryParams: Middleware<
 		const urlString = getUrlString(input);
 		const { url, isRelative } = parseUrl(urlString);
 
-		appendParams(url.searchParams, params, arrayFormat);
+		mergeParams(url.searchParams, params, arrayFormat);
 
 		if (input instanceof Request) {
 			const newUrl = reconstructUrl(url, isRelative);
