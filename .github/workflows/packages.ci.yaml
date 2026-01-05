@@ -19,6 +19,7 @@ jobs:
       "packages/middleware-retry-after": ${{ steps.filter.outputs['packages/middleware-retry-after'] }}
       "packages/middleware-retry-status": ${{ steps.filter.outputs['packages/middleware-retry-status'] }}
       "packages/middleware-base-url": ${{ steps.filter.outputs['packages/middleware-base-url'] }}
+      "packages/middleware-cookies": ${{ steps.filter.outputs['packages/middleware-cookies'] }}
 
     steps:
       - name: Checkout code
@@ -42,6 +43,9 @@ jobs:
               - '.github/workflows/_template.package-ci.yaml'
             'packages/middleware-base-url':
               - 'packages/middleware-base-url/**'
+              - '.github/workflows/_template.package-ci.yaml'
+            'packages/middleware-cookies':
+              - 'packages/middleware-cookies/**'
               - '.github/workflows/_template.package-ci.yaml'
 
   core:
@@ -75,3 +79,11 @@ jobs:
     with:
       package_path: "packages/middleware-base-url"
       package_name: "@qfetch/middleware-base-url"
+
+  middleware-cookies:
+    needs: detect-changes
+    if: needs.detect-changes.outputs['packages/middleware-cookies'] == 'true'
+    uses: ./.github/workflows/_template.package-ci.yaml
+    with:
+      package_path: "packages/middleware-cookies"
+      package_name: "@qfetch/middleware-cookies"
