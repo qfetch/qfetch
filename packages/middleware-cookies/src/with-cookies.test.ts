@@ -263,44 +263,14 @@ suite("withCookies - Unit", () => {
 	});
 
 	describe("handles edge cases", () => {
-		test("handles empty cookies object", async (ctx: TestContext) => {
-			// Arrange
+		test("throws when passed empty cookies object", (ctx: TestContext) => {
+			// Arrange & Act & Assert
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
-				const headers = new Headers(init?.headers);
-				ctx.assert.equal(
-					headers.get("Cookie"),
-					null,
-					"no cookie header is set for empty object",
-				);
-				return new Response();
-			});
-
-			const qfetch = withCookies({})(fetchMock);
-
-			// Act
-			await qfetch("https://example.com");
-		});
-
-		test("preserves existing cookies when adding empty object", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
-				const headers = new Headers(init?.headers);
-				ctx.assert.equal(
-					headers.get("Cookie"),
-					"existing=value",
-					"existing cookie is preserved",
-				);
-				return new Response();
-			});
-
-			const qfetch = withCookies({})(fetchMock);
-
-			// Act
-			await qfetch("https://example.com", {
-				headers: { Cookie: "existing=value" },
-			});
+			ctx.assert.throws(
+				() => withCookies({}),
+				TypeError,
+				"throws TypeError for empty cookies object",
+			);
 		});
 	});
 });

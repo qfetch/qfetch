@@ -349,56 +349,13 @@ suite("withCookies - Integration", { concurrency: true }, () => {
 	});
 
 	describe("handles edge cases", () => {
-		test("passes through unchanged with empty cookies object", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ cookie: req.headers.cookie ?? null }));
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const qfetch = withCookies({})(fetch);
-
-			// Act
-			const response = await qfetch(`${baseUrl}/api/data`, {
-				signal: ctx.signal,
-			});
-			const data = (await response.json()) as { cookie: string | null };
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
-			ctx.assert.strictEqual(
-				data.cookie,
-				null,
-				"no cookie header sent with empty object",
-			);
-		});
-
-		test("preserves existing cookies with empty middleware object", async (ctx: TestContext) => {
-			// Arrange
-			ctx.plan(2);
-			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ cookie: req.headers.cookie }));
-			});
-
-			const { baseUrl } = await createTestServer(ctx, handler);
-			const qfetch = withCookies({})(fetch);
-
-			// Act
-			const response = await qfetch(`${baseUrl}/api/data`, {
-				headers: { Cookie: "existing=value" },
-				signal: ctx.signal,
-			});
-			const data = (await response.json()) as { cookie: string };
-
-			// Assert
-			ctx.assert.strictEqual(response.status, 200, "returns successful status");
-			ctx.assert.strictEqual(
-				data.cookie,
-				"existing=value",
-				"existing cookie is preserved",
+		test("throws when passed empty cookies object", (ctx: TestContext) => {
+			// Arrange & Act & Assert
+			ctx.plan(1);
+			ctx.assert.throws(
+				() => withCookies({}),
+				TypeError,
+				"throws TypeError for empty cookies object",
 			);
 		});
 

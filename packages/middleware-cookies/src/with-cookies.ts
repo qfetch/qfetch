@@ -44,24 +44,20 @@ const mergeCookies = (existing: string | null, newCookies: string): string => {
 };
 
 /**
- * Gets existing Cookie header from input and init.
+ * Gets existing headers from input or init.
  *
  * @param input - Request input (string, URL, or Request)
  * @param init - Optional RequestInit with headers
- * @returns Existing Cookie header value or null
+ * @returns Headers source to use for building merged headers
  */
-const getExistingCookie = (
+const getExistingHeaders = (
 	input: RequestInfo | URL,
 	init?: RequestInit,
-): string | null => {
+): HeadersInit | undefined => {
 	if (input instanceof Request) {
-		return input.headers.get("Cookie");
+		return input.headers;
 	}
-	if (init?.headers) {
-		const headers = new Headers(init.headers);
-		return headers.get("Cookie");
-	}
-	return null;
+	return init?.headers;
 };
 
 /**
@@ -121,18 +117,13 @@ export const withCookie = (name: string, value: string): FetchExecutor => {
 	const cookieString = `${name}=${value}`;
 
 	return (next) => async (input, init) => {
-		const existingCookie = getExistingCookie(input, init);
-		const mergedCookie = mergeCookies(existingCookie, cookieString);
+		const headers = new Headers(getExistingHeaders(input, init));
+		const existingCookie = headers.get("Cookie");
+		headers.set("Cookie", mergeCookies(existingCookie, cookieString));
 
 		if (input instanceof Request) {
-			const headers = new Headers(input.headers);
-			headers.set("Cookie", mergedCookie);
-			input = new Request(input, { headers });
-			return next(input);
+			return next(new Request(input, { headers }));
 		}
-
-		const headers = new Headers(init?.headers);
-		headers.set("Cookie", mergedCookie);
 		return next(input, { ...init, headers });
 	};
 };
@@ -154,7 +145,6 @@ export const withCookie = (name: string, value: string): FetchExecutor => {
  * **Merge behavior:**
  * - If no `Cookie` header exists → sets `name1=value1; name2=value2`
  * - If `Cookie` header exists → appends `; name1=value1; name2=value2`
- * - Empty cookies object → passes request through unchanged
  *
  * **Input handling:**
  * - **String/URL inputs:** Cookies are added via `init.headers`
@@ -162,6 +152,7 @@ export const withCookie = (name: string, value: string): FetchExecutor => {
  *
  * @param cookies - Object with cookie name-value pairs. See {@link CookieEntries}.
  * @returns A fetch executor that adds the cookies to requests
+ * @throws {TypeError} If the cookies object is empty
  *
  * @example
  * ```ts
@@ -209,26 +200,20 @@ export const withCookie = (name: string, value: string): FetchExecutor => {
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie MDN: Cookie header}
  */
 export const withCookies = (cookies: CookieEntries): FetchExecutor => {
+	if (!cookies || Object.keys(cookies).length === 0) {
+		throw new TypeError("withCookies requires at least one cookie");
+	}
+
 	const cookieString = serializeCookies(cookies);
 
 	return (next) => async (input, init) => {
-		if (!cookieString) {
-			// No cookies to add, pass through unchanged
-			return next(input, init);
-		}
+		const headers = new Headers(getExistingHeaders(input, init));
+		const existingCookie = headers.get("Cookie");
+		headers.set("Cookie", mergeCookies(existingCookie, cookieString));
 
-		const existingCookie = getExistingCookie(input, init);
-		const mergedCookie = mergeCookies(existingCookie, cookieString);
-
-		if (input instanceof Request) {
-			const headers = new Headers(input.headers);
-			headers.set("Cookie", mergedCookie);
-			input = new Request(input, { headers });
-			return next(input);
-		}
-
-		const headers = new Headers(init?.headers);
-		headers.set("Cookie", mergedCookie);
-		return next(input, { ...init, headers });
+		const isRequest = input instanceof Request;
+		return !isRequest
+			? next(input, { ...init, headers })
+			: next(new Request(input, { headers }));
 	};
 };
