@@ -43,6 +43,15 @@
 					"jsonpath": "$.version"
 				}
 			]
+		},
+		"packages/middleware-authorization": {
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "jsr.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }
