@@ -168,7 +168,9 @@ export type AuthorizationOptions = {
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-401-unauthorized RFC 9110 - 401 Unauthorized}
  * @see {@link https://www.rfc-editor.org/rfc/rfc6750.html RFC 6750 - Bearer Token Usage}
  */
-export const withAuthorization: Middleware<AuthorizationOptions> = (opts) => {
+export const withAuthorization: Middleware<[opts: AuthorizationOptions]> = (
+	opts,
+) => {
 	const { tokenProvider } = opts;
 
 	return (next) => async (input, init) => {
