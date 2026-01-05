@@ -28,7 +28,9 @@ suite("with{{pascalCase middlewareName}} - Integration", { concurrency: true }, 
 				res.writeHead(404, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ error: "Not Found" }));
 			});
-			const qfetch = with{{pascalCase middlewareName}}()(fetch);
+			const qfetch = with{{pascalCase middlewareName}}({
+				// TODO: Add options
+			})(fetch);
 
 			// Act
 			const response = await qfetch(`${baseUrl}/success`, {

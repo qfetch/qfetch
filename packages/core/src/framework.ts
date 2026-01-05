@@ -27,26 +27,36 @@ export type FetchExecutor = (next: FetchFunction) => FetchFunction;
  * A middleware factory that creates a {@link FetchExecutor}.
  *
  * @remarks
- * The generic parameter `T` controls option handling:
- * - `Middleware` (no generic) - no options, call with `()`
- * - `Middleware<T>` - required options
- * - `Middleware<T | undefined>` - optional options
+ * The generic parameter `T` is a tuple type representing the middleware arguments:
+ * - `Middleware` (no generic) - no arguments, call with `()`
+ * - `Middleware<[opts: Options]>` - single required argument
+ * - `Middleware<[opts?: Options]>` - single optional argument
+ * - `Middleware<[name: string, value: string]>` - multiple positional arguments
+ * - `Middleware<[name: string, opts?: Options]>` - mixed required and optional
  *
- * @template T - The type of options the middleware accepts
+ * Named tuple labels provide documentation for argument names.
+ *
+ * @template T - Tuple type representing the middleware arguments
  *
  * @example
  * ```ts
+ * // No arguments
  * const withLogger: Middleware = () => (next) => (input, init) => {
  *   console.log("Request:", input);
  *   return next(input, init);
  * };
+ *
+ * // Single argument
+ * const withBaseUrl: Middleware<[baseUrl: string | URL]> = (baseUrl) => ...
+ *
+ * // Multiple arguments
+ * const withHeader: Middleware<[name: string, value: string]> = (name, value) => ...
+ *
+ * // Optional arguments
+ * const withTimeout: Middleware<[ms: number, opts?: TimeoutOptions]> = (ms, opts?) => ...
  * ```
  */
-export type Middleware<T = never> = [T] extends [never]
-	? () => FetchExecutor
-	: undefined extends T
-		? (opts?: T) => FetchExecutor
-		: (opts: T) => FetchExecutor;
+export type Middleware<T extends unknown[] = []> = (...args: T) => FetchExecutor;
 
 /**
  * Composes middleware executors in right-to-left order (functional composition).

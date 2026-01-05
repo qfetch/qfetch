@@ -30,23 +30,23 @@ npm install @qfetch/middleware-retry-status @proventuslabs/retry-strategies
 
 ## API
 
-### `withRetryStatus(options)`
+### `withRetryStatus(opts)`
 
 Creates a middleware that retries failed requests based on response status codes.
 
-#### Options
+#### Parameters
 
-- `strategy: () => BackoffStrategy` **(required)** - Factory function that creates a backoff strategy for retry delays
-  - The strategy determines how long to wait between retry attempts
-  - Controls when to stop retrying by returning `NaN`
-  - A new strategy instance is created for each request chain
-  - Use `upto()` wrapper from `@proventuslabs/retry-strategies` to limit retry attempts
-  - Common strategies: `linear()`, `exponential()`, `fullJitter()`
-- `retryableStatuses?: ReadonlySet<number>` - Set of HTTP status codes that trigger automatic retries (default: `new Set([408, 429, 500, 502, 503, 504])`)
-  - Only responses with these status codes will be retried
-  - Override to customize which status codes should trigger retry behavior
-  - Common codes: `408` (Request Timeout), `429` (Too Many Requests), `500` (Internal Server Error), `502` (Bad Gateway), `503` (Service Unavailable), `504` (Gateway Timeout)
-  - Use an empty set (`new Set()`) to disable all automatic retries
+- `opts` - Configuration object with the following properties:
+  - `strategy: () => BackoffStrategy` **(required)** - Factory function that creates a backoff strategy for retry delays
+    - The strategy determines how long to wait between retry attempts
+    - Controls when to stop retrying by returning `NaN`
+    - A new strategy instance is created for each request chain
+    - Use `upto()` wrapper from `@proventuslabs/retry-strategies` to limit retry attempts
+    - Common strategies: `linear()`, `exponential()`, `fullJitter()`
+  - `retryableStatuses?: ReadonlySet<number>` - Status codes that trigger retries (default: `new Set([408, 429, 500, 502, 503, 504])`)
+    - Only responses with these status codes will be retried
+    - Override to customize which status codes should trigger retry behavior
+    - Use an empty set (`new Set()`) to disable all automatic retries
 
 #### Behavior
 
