@@ -348,6 +348,40 @@ suite("withQueryParams - Unit", () => {
 			await qfetch("https://example.com/users");
 		});
 
+		test("passes through unchanged with non-object params", async (ctx: TestContext) => {
+			// Arrange
+			const cases = [
+				{ name: "null", value: null },
+				{ name: "undefined", value: undefined },
+				{ name: "string", value: "invalid" },
+				{ name: "number", value: 123 },
+				{ name: "array", value: ["a", "b"] },
+			];
+			ctx.plan(cases.length);
+
+			for (const { name, value } of cases) {
+				await ctx.test(name, async (subCtx: TestContext) => {
+					// Arrange
+					subCtx.plan(2);
+					const fetchMock = subCtx.mock.fn(fetch, async (input) => {
+						subCtx.assert.ok(typeof input === "string", "input is a string");
+						subCtx.assert.equal(
+							input,
+							"https://example.com/users",
+							"URL is unchanged",
+						);
+						return new Response();
+					});
+
+					// @ts-expect-error testing invalid input
+					const qfetch = withQueryParams(value)(fetchMock);
+
+					// Act
+					await qfetch("https://example.com/users");
+				});
+			}
+		});
+
 		test("merges with existing query params (request takes precedence)", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
