@@ -130,6 +130,31 @@ const appendParams = (
 };
 
 /**
+ * Appends a single query parameter value to URLSearchParams.
+ *
+ * @param searchParams - The URLSearchParams to modify
+ * @param name - The parameter name
+ * @param value - The parameter value (string or array)
+ * @param arrayFormat - How to format array values
+ */
+const appendParam = (
+	searchParams: URLSearchParams,
+	name: string,
+	value: QueryParamValue,
+	arrayFormat: "repeat" | "brackets",
+): void => {
+	if (Array.isArray(value)) {
+		if (value.length === 0) return;
+		const key = arrayFormat === "brackets" ? `${name}[]` : name;
+		for (const v of value) {
+			searchParams.append(key, v);
+		}
+	} else {
+		searchParams.append(name, value);
+	}
+};
+
+/**
  * Middleware that adds a single query parameter to outgoing fetch requests.
  *
  * Appends a query parameter to the URL of outgoing requests. If the URL
@@ -139,6 +164,11 @@ const appendParams = (
  * @remarks
  * **URL encoding:** Values are encoded using the standard URLSearchParams API,
  * which follows the application/x-www-form-urlencoded format.
+ *
+ * **Array handling:**
+ * - `arrayFormat: 'repeat'` (default): `["a", "b"]` → `?tags=a&tags=b`
+ * - `arrayFormat: 'brackets'`: `["a", "b"]` → `?tags[]=a&tags[]=b`
+ * - Empty arrays are skipped entirely
  *
  * **Merge behavior:**
  * - If no query string exists → sets `?name=value`
@@ -151,17 +181,38 @@ const appendParams = (
  * - **Request objects:** Returns new Request with modified URL
  *
  * @param name - The query parameter name
- * @param value - The query parameter value (encoded via URLSearchParams)
+ * @param value - The query parameter value or array of values (encoded via URLSearchParams)
+ * @param options - Optional configuration. See {@link QueryParamsOptions}.
  * @returns A fetch executor that adds the query parameter to requests
  *
  * @example
  * ```ts
  * import { withQueryParam } from "@qfetch/middleware-query-params";
  *
- * // Basic usage
+ * // Basic usage with single value
  * const qfetch = withQueryParam("page", "1")(fetch);
  * await qfetch("https://api.example.com/users");
  * // → https://api.example.com/users?page=1
+ * ```
+ *
+ * @example
+ * ```ts
+ * import { withQueryParam } from "@qfetch/middleware-query-params";
+ *
+ * // Array values with repeated keys (default)
+ * const qfetch = withQueryParam("tags", ["foo", "bar"])(fetch);
+ * await qfetch("https://api.example.com/posts");
+ * // → https://api.example.com/posts?tags=foo&tags=bar
+ * ```
+ *
+ * @example
+ * ```ts
+ * import { withQueryParam } from "@qfetch/middleware-query-params";
+ *
+ * // Array values with bracket notation
+ * const qfetch = withQueryParam("tags", ["foo", "bar"], { arrayFormat: "brackets" })(fetch);
+ * await qfetch("https://api.example.com/posts");
+ * // → https://api.example.com/posts?tags[]=foo&tags[]=bar
  * ```
  *
  * @example
@@ -181,12 +232,18 @@ const appendParams = (
  * @see {@link withQueryParams} for setting multiple query parameters at once
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams MDN: URLSearchParams}
  */
-export const withQueryParam = (name: string, value: string): FetchExecutor => {
+export const withQueryParam = (
+	name: string,
+	value: QueryParamValue,
+	options?: QueryParamsOptions,
+): FetchExecutor => {
+	const arrayFormat = options?.arrayFormat ?? "repeat";
+
 	return (next) => async (input, init) => {
 		const urlString = getUrlString(input);
 		const { url, isRelative } = parseUrl(urlString);
 
-		url.searchParams.append(name, value);
+		appendParam(url.searchParams, name, value, arrayFormat);
 
 		if (input instanceof Request) {
 			const newUrl = reconstructUrl(url, isRelative);
