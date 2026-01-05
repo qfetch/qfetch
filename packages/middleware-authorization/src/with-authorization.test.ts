@@ -4,7 +4,6 @@ import { createStrategyMock, flushMicrotasks } from "@qfetch/test-utils";
 
 import {
 	type AuthorizationToken,
-	CANCEL_REASON,
 	type TokenProvider,
 	withAuthorization,
 } from "./with-authorization.ts";
@@ -969,8 +968,8 @@ suite("withAuthorization - Unit", () => {
 			);
 			ctx.assert.deepStrictEqual(
 				cancelMock.mock.calls[0]?.arguments,
-				[CANCEL_REASON],
-				"passes CANCEL_REASON to cancel",
+				["Retry scheduled"],
+				"passes reason to cancel",
 			);
 		});
 
