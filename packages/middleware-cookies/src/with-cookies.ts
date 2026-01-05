@@ -1,4 +1,4 @@
-import type { FetchExecutor } from "@qfetch/core";
+import type { Middleware } from "@qfetch/core";
 
 /**
  * Cookie entries as name-value pairs.
@@ -113,7 +113,10 @@ const getExistingHeaders = (
  * @see {@link withCookies} for setting multiple cookies at once
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie MDN: Cookie header}
  */
-export const withCookie = (name: string, value: string): FetchExecutor => {
+export const withCookie: Middleware<[name: string, value: string]> = (
+	name,
+	value,
+) => {
 	const cookieString = `${name}=${value}`;
 
 	return (next) => async (input, init) => {
@@ -199,9 +202,15 @@ export const withCookie = (name: string, value: string): FetchExecutor => {
  * @see {@link withCookie} for setting a single cookie
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie MDN: Cookie header}
  */
-export const withCookies = (cookies: CookieEntries): FetchExecutor => {
-	if (!cookies || Object.keys(cookies).length === 0) {
-		throw new TypeError("withCookies requires at least one cookie");
+export const withCookies: Middleware<[cookies: CookieEntries]> = (cookies) => {
+	if (
+		!cookies ||
+		cookies.constructor !== Object ||
+		Object.keys(cookies).length === 0
+	) {
+		throw new TypeError(
+			"withCookies requires an object with at least one cookie",
+		);
 	}
 
 	const cookieString = serializeCookies(cookies);

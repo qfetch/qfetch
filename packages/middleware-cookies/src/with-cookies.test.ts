@@ -262,15 +262,30 @@ suite("withCookies - Unit", () => {
 		});
 	});
 
-	describe("handles edge cases", () => {
-		test("throws when passed empty cookies object", (ctx: TestContext) => {
-			// Arrange & Act & Assert
-			ctx.plan(1);
-			ctx.assert.throws(
-				() => withCookies({}),
-				TypeError,
-				"throws TypeError for empty cookies object",
-			);
+	describe("initialisation constraints", () => {
+		test("throws an error for invalid cookies input", async (ctx: TestContext) => {
+			const invalidInputs = [
+				{ input: {}, description: "empty object" },
+				{ input: null, description: "null" },
+				{ input: undefined, description: "undefined" },
+				{ input: [], description: "array" },
+				{ input: new Map(), description: "Map instance" },
+				{ input: new (class Cookies {})(), description: "class instance" },
+			];
+
+			ctx.plan(invalidInputs.length);
+
+			for (const { input, description } of invalidInputs) {
+				await ctx.test(description, (subCtx) => {
+					subCtx.plan(1);
+					subCtx.assert.throws(
+						// @ts-expect-error -- testing invalid input types
+						() => withCookies(input),
+						TypeError,
+						`throws TypeError for ${description}`,
+					);
+				});
+			}
 		});
 	});
 });

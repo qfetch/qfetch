@@ -40,7 +40,9 @@ Creates a middleware that sets multiple cookies on outgoing requests.
 **Merge behavior:**
 - If no `Cookie` header exists → sets the new cookie(s)
 - If `Cookie` header exists → appends new cookies with `; ` separator
-- Empty cookies object → passes request through unchanged
+
+**Validation:**
+- `withCookies` throws `TypeError` if passed an empty cookies object
 
 **Input handling:**
 - **String/URL inputs:** Cookies are added via `init.headers`
