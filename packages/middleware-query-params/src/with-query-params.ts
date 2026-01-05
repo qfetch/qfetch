@@ -182,7 +182,7 @@ const appendParams = (
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams MDN: URLSearchParams}
  */
 export const withQueryParam = (name: string, value: string): FetchExecutor => {
-	return (next) => (input, init) => {
+	return (next) => async (input, init) => {
 		const urlString = getUrlString(input);
 		const { url, isRelative } = parseUrl(urlString);
 
@@ -298,12 +298,13 @@ export const withQueryParams = (
 ): FetchExecutor => {
 	const arrayFormat = options?.arrayFormat ?? "repeat";
 
-	return (next) => (input, init) => {
-		// Fast path: empty params
-		if (Object.keys(params).length === 0) {
-			return next(input, init);
-		}
+	// Fast path: empty params (checked at creation time, not per-request)
+	const isParamsEmpty = Object.keys(params).length === 0;
+	if (isParamsEmpty) {
+		return (next) => (input, init) => next(input, init);
+	}
 
+	return (next) => async (input, init) => {
 		const urlString = getUrlString(input);
 		const { url, isRelative } = parseUrl(urlString);
 
