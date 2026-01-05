@@ -1,3 +1,27 @@
+/**
+ * DESIGN GUIDANCE: Choosing between object options and positional parameters
+ *
+ * Use POSITIONAL parameters when:
+ * - 1-2 simple, required values (e.g., `withBaseUrl(baseUrl)`, `withHeader(name, value)`)
+ * - Values form a natural pair or have obvious ordering
+ * - API is unlikely to need additional options
+ *
+ * Use OBJECT options when:
+ * - Multiple configuration properties (especially optional ones)
+ * - Configuration is likely to expand over time
+ * - Properties benefit from named keys for clarity
+ *
+ * HYBRID approach (positional + optional object):
+ * - `withQueryParam(name, value, opts?)` - required values + optional config
+ *
+ * Examples:
+ * - Positional: `Middleware<[baseUrl: string | URL]>`
+ * - Object: `Middleware<[opts: RetryOptions]>`
+ * - Hybrid: `Middleware<[name: string, value: string, opts?: Options]>`
+ *
+ * Delete this comment block after reading.
+ */
+
 import type { Middleware } from "@qfetch/core";
 
 /**
