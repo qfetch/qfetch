@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-query-params",
-	"description": "Fetch middleware",
+	"description": "Fetch middleware for adding query parameters to request URLs.",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
