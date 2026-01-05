@@ -56,7 +56,9 @@ export type FetchExecutor = (next: FetchFunction) => FetchFunction;
  * const withTimeout: Middleware<[ms: number, opts?: TimeoutOptions]> = (ms, opts?) => ...
  * ```
  */
-export type Middleware<T extends unknown[] = []> = (...args: T) => FetchExecutor;
+export type Middleware<T extends unknown[] = []> = (
+	...args: T
+) => FetchExecutor;
 
 /**
  * Composes middleware executors in right-to-left order (functional composition).
