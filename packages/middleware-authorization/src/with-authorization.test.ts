@@ -4,6 +4,7 @@ import { createStrategyMock, flushMicrotasks } from "@qfetch/test-utils";
 
 import {
 	type AuthorizationToken,
+	CANCEL_REASON,
 	type TokenProvider,
 	withAuthorization,
 } from "./with-authorization.ts";
@@ -302,6 +303,38 @@ suite("withAuthorization - Unit", () => {
 				body.custom,
 				"custom-value",
 				"preserves custom header from Request",
+			);
+		});
+
+		test("init headers take precedence over Request headers for same key", async (ctx: TestContext) => {
+			// Arrange
+			ctx.plan(1);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("X-Custom-Header"));
+			});
+			const { provider: tokenProvider } = createTokenProviderMock(ctx, [
+				{ accessToken: "test-token", tokenType: "Bearer" },
+			]);
+			const qfetch = withAuthorization({
+				tokenProvider,
+				strategy: createStrategyMock(ctx, []),
+			})(fetchMock);
+			const request = new Request("https://example.com", {
+				headers: { "X-Custom-Header": "request-value" },
+			});
+
+			// Act
+			const response = await qfetch(request, {
+				headers: { "X-Custom-Header": "init-value" },
+			});
+			const body = await response.text();
+
+			// Assert
+			ctx.assert.strictEqual(
+				body,
+				"init-value",
+				"init headers take precedence over Request headers",
 			);
 		});
 
@@ -936,8 +969,8 @@ suite("withAuthorization - Unit", () => {
 			);
 			ctx.assert.deepStrictEqual(
 				cancelMock.mock.calls[0]?.arguments,
-				["Retry scheduled"],
-				"passes reason to cancel",
+				[CANCEL_REASON],
+				"passes CANCEL_REASON to cancel",
 			);
 		});
 
