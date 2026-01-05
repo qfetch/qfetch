@@ -32,29 +32,29 @@ npm install @qfetch/middleware-retry-after @proventuslabs/retry-strategies
 
 ## API
 
-### `withRetryAfter(options)`
+### `withRetryAfter(opts)`
 
 Creates a middleware that retries failed requests based on the `Retry-After` header.
 
-#### Options
+#### Parameters
 
-- `strategy: () => BackoffStrategy` **(required)** - Factory function that creates a backoff strategy for retry delays
-  - The strategy determines additional delay (jitter) to add to the server-requested `Retry-After` delay
-  - Controls when to stop retrying by returning `NaN`
-  - Total wait time = `Retry-After` value + strategy backoff value
-  - A new strategy instance is created for each request chain
-  - Use `upto()` wrapper from `@proventuslabs/retry-strategies` to limit retry attempts
-  - Common strategies: `zero()` (no jitter), `fullJitter()`, `linear()`, `exponential()`
-- `maxServerDelay?: number` - Maximum delay in milliseconds accepted from the server for a single retry (default: unlimited)
-  - `0` means only allow instant retries (zero delay)
-  - Positive integers set a ceiling on the server's requested delay
-  - Negative or `NaN` values mean unlimited delay
-  - If the server's `Retry-After` value exceeds this, a `ConstraintError` is thrown
-- `retryableStatuses?: ReadonlySet<number>` - Set of HTTP status codes that trigger automatic retries (default: `new Set([429, 503])`)
-  - Only responses with these status codes and a valid `Retry-After` header will be retried
-  - Override to customize which status codes should trigger retry behavior
-  - Common additional codes: `502` (Bad Gateway), `503` (Service Unavailable), `504` (Gateway Timeout)
-  - Use an empty set (`new Set()`) to disable all automatic retries
+- `opts` - Configuration object with the following properties:
+  - `strategy: () => BackoffStrategy` **(required)** - Factory function that creates a backoff strategy for retry delays
+    - The strategy determines additional delay (jitter) to add to the server-requested `Retry-After` delay
+    - Controls when to stop retrying by returning `NaN`
+    - Total wait time = `Retry-After` value + strategy backoff value
+    - A new strategy instance is created for each request chain
+    - Use `upto()` wrapper from `@proventuslabs/retry-strategies` to limit retry attempts
+    - Common strategies: `zero()` (no jitter), `fullJitter()`, `linear()`, `exponential()`
+  - `maxServerDelay?: number` - Maximum delay in milliseconds accepted from the server (default: unlimited)
+    - `0` means only allow instant retries (zero delay)
+    - Positive integers set a ceiling on the server's requested delay
+    - Negative or `NaN` values mean unlimited delay
+    - If the server's `Retry-After` value exceeds this, a `ConstraintError` is thrown
+  - `retryableStatuses?: ReadonlySet<number>` - Status codes that trigger retries (default: `new Set([429, 503])`)
+    - Only responses with these status codes and a valid `Retry-After` header will be retried
+    - Override to customize which status codes should trigger retry behavior
+    - Use an empty set (`new Set()`) to disable all automatic retries
 
 #### Behavior
 

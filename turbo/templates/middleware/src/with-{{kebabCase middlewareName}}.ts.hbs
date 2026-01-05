@@ -1,3 +1,27 @@
+/**
+ * DESIGN GUIDANCE: Choosing between object options and positional parameters
+ *
+ * Use POSITIONAL parameters when:
+ * - 1-2 simple, required values (e.g., `withBaseUrl(baseUrl)`, `withHeader(name, value)`)
+ * - Values form a natural pair or have obvious ordering
+ * - API is unlikely to need additional options
+ *
+ * Use OBJECT options when:
+ * - Multiple configuration properties (especially optional ones)
+ * - Configuration is likely to expand over time
+ * - Properties benefit from named keys for clarity
+ *
+ * HYBRID approach (positional + optional object):
+ * - `withQueryParam(name, value, opts?)` - required values + optional config
+ *
+ * Examples:
+ * - Positional: `Middleware<[baseUrl: string | URL]>`
+ * - Object: `Middleware<[opts: RetryOptions]>`
+ * - Hybrid: `Middleware<[name: string, value: string, opts?: Options]>`
+ *
+ * Delete this comment block after reading.
+ */
+
 import type { Middleware } from "@qfetch/core";
 
 /**
@@ -5,37 +29,12 @@ import type { Middleware } from "@qfetch/core";
  *
  * [TODO: Add detailed description of what these options control and their purpose.
  * Reference relevant web standards (RFC, MDN, etc.) if applicable.]
- *
- * @example
- * ```ts
- * // Example with default configuration
- * const opts: {{pascalCase middlewareName}}Options = {
- *   // TODO: Add realistic option examples
- * };
- * ```
- *
- * @example
- * ```ts
- * // Example with alternative configuration
- * const opts: {{pascalCase middlewareName}}Options = {
- *   // TODO: Add alternative configuration example
- * };
- * ```
  */
 export type {{pascalCase middlewareName}}Options = {
 	/**
 	 * [TODO: Describe this option's purpose and behavior.]
 	 *
-	 * - [TODO: Document valid values and their meanings]
-	 * - [TODO: Document edge cases or special values]
-	 * - [TODO: Document default behavior]
-	 *
 	 * @default [TODO: default value or undefined]
-	 *
-	 * @example
-	 * ```ts
-	 * { option: value }  // TODO: describe this example
-	 * ```
 	 */
 	// option?: type;
 };
@@ -47,58 +46,24 @@ export type {{pascalCase middlewareName}}Options = {
  * when to use it, and how it integrates with the fetch API. Reference relevant
  * web standards (RFC, MDN, etc.) if applicable.]
  *
- * ### Behavioral summary
- * - **[TODO: Key behavior 1]**: [Detailed explanation]
- * - **[TODO: Key behavior 2]**: [Detailed explanation]
- * - **[TODO: Edge case handling]**: [Explanation of how edge cases are handled]
+ * @remarks
+ * [TODO: Document key behaviors and edge cases]
  *
- * ### Important limitations
- * [TODO: Document any known limitations, constraints, or gotchas that users
- * should be aware of. For example, incompatibilities with certain request types,
- * browser limitations, performance considerations, etc.]
+ * @param opts - Configuration options. See {@link {{pascalCase middlewareName}}Options} for details.
  *
  * @example
  * ```ts
- * // Basic usage
- * import { with{{pascalCase middlewareName}} } from "@qfetch/middleware-{{kebabCase middlewareName}}";
- *
- * const qfetch = with{{pascalCase middlewareName}}()(fetch);
- * const response = await qfetch("https://example.com");
- * ```
- *
- * @example
- * ```ts
- * // Usage with options
  * import { with{{pascalCase middlewareName}} } from "@qfetch/middleware-{{kebabCase middlewareName}}";
  *
  * const qfetch = with{{pascalCase middlewareName}}({
- *   // TODO: Add realistic configuration
+ *   // TODO: Add configuration
  * })(fetch);
  *
- * const response = await qfetch("https://example.com");
+ * await qfetch("https://example.com");
  * ```
- *
- * @example
- * ```ts
- * // Composition with other middlewares
- * import { with{{pascalCase middlewareName}} } from "@qfetch/middleware-{{kebabCase middlewareName}}";
- * import { compose } from "@qfetch/core";
- *
- * const qfetch = compose(
- *   with{{pascalCase middlewareName}}(),
- *   // other middlewares...
- * )(fetch);
- *
- * const response = await qfetch("https://example.com");
- * ```
- *
- * @param opts - Optional configuration parameters controlling middleware behavior.
- *               See {@link {{pascalCase middlewareName}}Options} for details.
- * @returns A middleware function compatible with `@qfetch/core` that [TODO: describe
- *          what transformation/behavior this middleware applies].
  */
-export const with{{pascalCase middlewareName}}: Middleware<{{pascalCase middlewareName}}Options | undefined> = (
-	opts = {},
+export const with{{pascalCase middlewareName}}: Middleware<[opts: {{pascalCase middlewareName}}Options]> = (
+	opts,
 ) => {
 	// TODO: Extract and validate options
 	// const {} = opts;

@@ -26,13 +26,13 @@ npm install @qfetch/middleware-base-url
 
 ## API
 
-### `withBaseUrl(options)`
+### `withBaseUrl(baseUrl)`
 
 Creates a middleware that resolves request URLs against the given base URL using standard URL resolution.
 
-#### Options
+#### Parameters
 
-- Base URL (`string | URL`) **(required)** - The base URL to resolve requests against
+- `baseUrl` (`string | URL`) - The base URL to resolve requests against
   - Accepts either a string or URL instance
   - Must be a valid URL (throws `TypeError` if invalid)
   - Trailing slash recommended for predictable path resolution

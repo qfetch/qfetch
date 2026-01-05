@@ -12,7 +12,9 @@ suite("with{{pascalCase middlewareName}} - Unit", () => {
 			// Arrange
 			ctx.plan(1);
 			const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-			const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
+			const qfetch = with{{pascalCase middlewareName}}({
+				// TODO: Add options
+			})(fetchMock);
 
 			// Act
 			const response = await qfetch("https://example.com");
@@ -35,7 +37,9 @@ suite("with{{pascalCase middlewareName}} - Unit", () => {
 				// Arrange
 				ctx.plan(1);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
+				const qfetch = with{{pascalCase middlewareName}}({
+					// TODO: Add options
+				})(fetchMock);
 
 				// Act
 				const response = await qfetch("https://example.com");
@@ -49,7 +53,9 @@ suite("with{{pascalCase middlewareName}} - Unit", () => {
 				// Arrange
 				ctx.plan(1);
 				const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-				const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
+				const qfetch = with{{pascalCase middlewareName}}({
+					// TODO: Add options
+				})(fetchMock);
 
 				// Act
 				const response = await qfetch("https://example.com");
@@ -68,7 +74,9 @@ suite("with{{pascalCase middlewareName}} - Unit", () => {
 	// 		ctx.plan(2);
 	// 		ctx.mock.timers.enable({ apis: ["setTimeout"] });
 	// 		const fetchMock = ctx.mock.fn(fetch, async () => new Response("ok"));
-	// 		const qfetch = with{{pascalCase middlewareName}}()(fetchMock);
+	// 		const qfetch = with{{pascalCase middlewareName}}({
+	// 			// TODO: Add options
+	// 		})(fetchMock);
 	//
 	// 		// Act
 	// 		const presponse = qfetch("https://example.com");

@@ -78,7 +78,7 @@ export type RetryAfterOptions = {
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 - Retry-After}
  */
-export const withRetryAfter: Middleware<RetryAfterOptions> = (opts) => {
+export const withRetryAfter: Middleware<[opts: RetryAfterOptions]> = (opts) => {
 	const maxServerDelay =
 		typeof opts.maxServerDelay !== "number" || opts.maxServerDelay < 0
 			? NaN
