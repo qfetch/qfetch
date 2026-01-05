@@ -4,7 +4,7 @@ Fetch middleware for adding query parameters to outgoing request URLs.
 
 ## Overview
 
-Appends query parameters to request URLs using the standard `URLSearchParams` API. Parameters are properly encoded and merged with any existing query string in the URL.
+Sets default query parameters on request URLs using the standard `URLSearchParams` API. Parameters are properly encoded and merged with any existing query string, with **request parameters taking precedence** over middleware parameters.
 
 **Input handling:**
 - **String inputs** → Returns modified string (preserves relative/absolute format)
@@ -27,14 +27,16 @@ npm install @qfetch/middleware-query-params
 
 ## API
 
-### `withQueryParam(name, value)`
+### `withQueryParam(name, value, options?)`
 
 Creates a middleware that adds a single query parameter to outgoing requests.
 
 #### Parameters
 
 - `name` (`string`) **(required)** - The query parameter name
-- `value` (`string`) **(required)** - The query parameter value (encoded via URLSearchParams)
+- `value` (`QueryParamValue`) **(required)** - The query parameter value or array of values (encoded via URLSearchParams)
+- `options` (`QueryParamsOptions`, optional) - Configuration options
+  - `arrayFormat?: 'repeat' | 'brackets'` - How to serialize array values (default: `'repeat'`)
 
 ### `withQueryParams(params, options?)`
 
@@ -62,7 +64,7 @@ type QueryParamsOptions = {
 #### Behavior
 
 - **URL encoding** - Values are encoded using the standard `URLSearchParams` API, which follows the `application/x-www-form-urlencoded` format
-- **Merge behavior** - Parameters are appended to any existing query string; duplicate keys are allowed (both values are kept)
+- **Merge behavior** - Middleware params are set first, then request params are appended (request takes precedence)
 - **Type preservation** - Input types are preserved (string→string, URL→URL, Request→Request)
 - **Relative URLs** - Handled correctly; `/api/users` stays relative after adding params
 
@@ -119,8 +121,8 @@ await qfetch('users');
 
 ## Notes
 
-- Parameters are always **appended** to existing query strings, never replaced
-- Duplicate parameter names are allowed (standard `URLSearchParams.append()` behavior)
+- Middleware params act as **defaults**; request params take precedence by appearing later in the query string
+- When keys overlap, both values are kept (middleware value first, request value after)
 - Empty params object `{}` passes requests through unchanged (fast path)
 - Empty arrays `[]` are skipped entirely
 - Special characters in values are automatically encoded

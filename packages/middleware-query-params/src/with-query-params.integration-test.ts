@@ -32,7 +32,7 @@ suite("withQueryParam - Integration", { concurrency: true }, () => {
 			);
 		});
 
-		test("merges with existing query params", async (ctx: TestContext) => {
+		test("merges with existing query params (request takes precedence)", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
 			const handler = ctx.mock.fn<RequestHandler>((req, res) => {
@@ -53,8 +53,8 @@ suite("withQueryParam - Integration", { concurrency: true }, () => {
 			ctx.assert.strictEqual(response.status, 200, "returns successful status");
 			ctx.assert.strictEqual(
 				data.url,
-				"/users?page=1&limit=10",
-				"server receives merged params",
+				"/users?limit=10&page=1",
+				"middleware param first, request param after",
 			);
 		});
 
