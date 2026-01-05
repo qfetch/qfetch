@@ -1,6 +1,6 @@
 import { describe, suite, type TestContext, test } from "node:test";
 
-import { type BaseUrlOptions, withBaseUrl } from "./with-base-url.ts";
+import { withBaseUrl } from "./with-base-url.ts";
 
 /* node:coverage disable */
 
@@ -9,11 +9,10 @@ suite("withBaseUrl - Unit", () => {
 		test("throws error when base URL is invalid", (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const opts: BaseUrlOptions = "not-a-valid-url";
 
 			// Assert
 			ctx.assert.throws(
-				() => withBaseUrl(opts),
+				() => withBaseUrl("not-a-valid-url"),
 				"throws error for invalid base URL",
 			);
 		});
@@ -21,11 +20,10 @@ suite("withBaseUrl - Unit", () => {
 		test("accepts valid base URL without errors", (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const opts: BaseUrlOptions = "http://api.local";
 
 			// Assert
 			ctx.assert.doesNotThrow(
-				() => withBaseUrl(opts),
+				() => withBaseUrl("http://api.local"),
 				"does not throw error for valid base URL",
 			);
 		});
@@ -33,11 +31,10 @@ suite("withBaseUrl - Unit", () => {
 		test("accepts URL object as base URL", (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const opts: BaseUrlOptions = new URL("http://api.local/v1/");
 
 			// Assert
 			ctx.assert.doesNotThrow(
-				() => withBaseUrl(opts),
+				() => withBaseUrl(new URL("http://api.local/v1/")),
 				"does not throw error for URL object as base",
 			);
 		});
