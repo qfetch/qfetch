@@ -22,6 +22,7 @@
 !biome.json
 !turbo.json
 !tsconfig*.json
+!typedoc.json
 !flake.nix
 !flake.lock
 !.release-please-manifest.json
@@ -42,3 +43,4 @@
 node_modules/
 dist/
 coverage/
+docs/
