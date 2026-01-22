@@ -1,4 +1,4 @@
-import { describe, suite, test, type TestContext } from "node:test";
+import { describe, suite, type TestContext, test } from "node:test";
 
 import { withHeader, withHeaders } from "./with-headers.ts";
 
@@ -85,10 +85,7 @@ suite("withHeader - Unit", () => {
 					return new Response(headers.get("Content-Type"));
 				},
 			);
-			const qfetch = withHeader(
-				"Content-Type",
-				"application/json",
-			)(fetchMock);
+			const qfetch = withHeader("Content-Type", "application/json")(fetchMock);
 
 			// Act
 			const response = await qfetch("https://example.com", {
@@ -119,7 +116,10 @@ suite("withHeader - Unit", () => {
 					return new Response(headers.get("Authorization"));
 				},
 			);
-			const qfetch = withHeader("Authorization", "Bearer middleware")(fetchMock);
+			const qfetch = withHeader(
+				"Authorization",
+				"Bearer middleware",
+			)(fetchMock);
 
 			// Act
 			const request = new Request("https://example.com", {
@@ -146,10 +146,7 @@ suite("withHeader - Unit", () => {
 					return new Response(headers.get("content-type"));
 				},
 			);
-			const qfetch = withHeader(
-				"Content-Type",
-				"application/json",
-			)(fetchMock);
+			const qfetch = withHeader("Content-Type", "application/json")(fetchMock);
 
 			// Act
 			const response = await qfetch("https://example.com", {
@@ -537,7 +534,9 @@ suite("withHeaders - Unit", () => {
 			const qfetch = withHeaders({ "X-Custom": "value" })(fetchMock);
 
 			// Act
-			const response = await qfetch("https://example.com", { method: "DELETE" });
+			const response = await qfetch("https://example.com", {
+				method: "DELETE",
+			});
 			const body = await response.text();
 
 			// Assert

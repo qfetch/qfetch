@@ -1,4 +1,4 @@
-import { describe, suite, test, type TestContext } from "node:test";
+import { describe, suite, type TestContext, test } from "node:test";
 
 import { compose, pipeline } from "@qfetch/core";
 import { createTestServer, type RequestHandler } from "@qfetch/test-utils";
@@ -448,7 +448,10 @@ suite("withHeaders - Integration", { concurrency: true }, () => {
 				method: "DELETE",
 				signal: ctx.signal,
 			});
-			const data = (await response.json()) as { method: string; custom: string };
+			const data = (await response.json()) as {
+				method: string;
+				custom: string;
+			};
 
 			// Assert
 			ctx.assert.strictEqual(data.method, "DELETE", "uses DELETE method");
