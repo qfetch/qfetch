@@ -1,12 +1,9 @@
 name: Documentation
 
 on:
-  workflow_run:
-    workflows: ["Packages CD"]
+  release:
     types:
-      - completed
-    branches:
-      - main
+      - published
   workflow_dispatch:
 
 permissions:
@@ -22,7 +19,6 @@ jobs:
   build:
     timeout-minutes: 5
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout code
