@@ -24,3 +24,5 @@ jobs:
             gha
             core
             middleware-\S+
+            middlewares
+            qfetch
