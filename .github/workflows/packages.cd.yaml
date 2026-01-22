@@ -32,6 +32,8 @@ jobs:
       "packages/middleware-query-params--release_created": ${{ steps.release.outputs['packages/middleware-query-params--release_created'] }}
       "packages/middleware-headers--tag_name": ${{ steps.release.outputs['packages/middleware-headers--tag_name'] }}
       "packages/middleware-headers--release_created": ${{ steps.release.outputs['packages/middleware-headers--release_created'] }}
+      "packages/qfetch--tag_name": ${{ steps.release.outputs['packages/qfetch--tag_name'] }}
+      "packages/qfetch--release_created": ${{ steps.release.outputs['packages/qfetch--release_created'] }}
       # Add more outputs for other packages here
 
     steps:
@@ -109,3 +111,12 @@ jobs:
       package_path: "packages/middleware-headers"
       package_name: "@qfetch/middleware-headers"
       package_tag: ${{ needs.release-please.outputs['packages/middleware-headers--tag_name'] }}
+
+  qfetch:
+    needs: release-please
+    if: ${{ needs.release-please.outputs['packages/qfetch--release_created'] == 'true' }}
+    uses: ./.github/workflows/_template.package-cd.yaml
+    with:
+      package_path: "packages/qfetch"
+      package_name: "qfetch"
+      package_tag: ${{ needs.release-please.outputs['packages/qfetch--tag_name'] }}
