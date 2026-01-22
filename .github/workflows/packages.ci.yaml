@@ -21,6 +21,7 @@ jobs:
       "packages/middleware-base-url": ${{ steps.filter.outputs['packages/middleware-base-url'] }}
       "packages/middleware-authorization": ${{ steps.filter.outputs['packages/middleware-authorization'] }}
       "packages/middleware-query-params": ${{ steps.filter.outputs['packages/middleware-query-params'] }}
+      "packages/middleware-headers": ${{ steps.filter.outputs['packages/middleware-headers'] }}
 
     steps:
       - name: Checkout code
@@ -50,6 +51,9 @@ jobs:
               - '.github/workflows/_template.package-ci.yaml'
             'packages/middleware-query-params':
               - 'packages/middleware-query-params/**'
+              - '.github/workflows/_template.package-ci.yaml'
+            'packages/middleware-headers':
+              - 'packages/middleware-headers/**'
               - '.github/workflows/_template.package-ci.yaml'
 
   core:
@@ -99,3 +103,11 @@ jobs:
     with:
       package_path: "packages/middleware-query-params"
       package_name: "@qfetch/middleware-query-params"
+
+  middleware-headers:
+    needs: detect-changes
+    if: needs.detect-changes.outputs['packages/middleware-headers'] == 'true'
+    uses: ./.github/workflows/_template.package-ci.yaml
+    with:
+      package_path: "packages/middleware-headers"
+      package_name: "@qfetch/middleware-headers"
