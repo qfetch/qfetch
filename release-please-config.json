@@ -79,6 +79,15 @@
 					"jsonpath": "$.version"
 				}
 			]
+		},
+		"packages/middlewares": {
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "jsr.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }

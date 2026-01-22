@@ -1,0 +1,62 @@
+{
+	"name": "@qfetch/middlewares",
+	"description": "Collection of all qfetch middlewares - convenience package for importing all middlewares at once.",
+	"version": "0.1.0",
+	"author": "vabatta",
+	"bugs": "https://github.com/qfetch/qfetch/issues",
+	"dependencies": {
+		"@qfetch/middleware-authorization": "workspace:^",
+		"@qfetch/middleware-base-url": "workspace:^",
+		"@qfetch/middleware-headers": "workspace:^",
+		"@qfetch/middleware-query-params": "workspace:^",
+		"@qfetch/middleware-retry-after": "workspace:^",
+		"@qfetch/middleware-retry-status": "workspace:^"
+	},
+	"devDependencies": {
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist"
+	],
+	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middlewares#readme",
+	"keywords": [
+		"authorization",
+		"base-url",
+		"composable",
+		"fetch",
+		"headers",
+		"http",
+		"middleware",
+		"query-params",
+		"retry",
+		"typescript"
+	],
+	"license": "MIT",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/qfetch/qfetch.git",
+		"directory": "packages/middlewares"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check-types": "tsc --noEmit",
+		"style": "biome check ."
+	},
+	"type": "module",
+	"types": "./dist/index.d.ts"
+}
