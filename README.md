@@ -4,19 +4,25 @@ A TypeScript framework for composable fetch middlewares built on standard web AP
 
 ## Overview
 
-qfetch lets you compose reusable request/response processing logic around the native `fetch` API. Build fetch clients with retry logic, error handling, logging, base URLs, and more through composable middleware.
+qfetch lets you compose reusable request/response processing logic around the native `fetch` API. Build fetch clients with retry logic, authorization, default headers, base URLs, and more through composable middleware.
 
 ```typescript
-import { compose } from '@qfetch/core';
-import { withRetry } from '@qfetch/middleware-retry';
-import { withBaseUrl } from '@qfetch/middleware-base-url';
+import {
+  compose,
+  withRetryStatus,
+  withRetryAfter,
+  withHeaders,
+  withBaseUrl,
+} from '@qfetch/qfetch';
 
 const qfetch = compose(
-  withRetry({ maxRetries: 3 }),
+  withRetryStatus({ statuses: [500, 502, 503] }),
+  withRetryAfter(),
+  withHeaders({ 'Content-Type': 'application/json' }),
   withBaseUrl('https://api.example.com')
 )(fetch);
 
-// Use qfetch like regular fetch with baked in retry + base URL
+// Use like regular fetch with retry, headers, and base URL baked in
 const response = await qfetch('/users');
 ```
 
@@ -31,16 +37,33 @@ const response = await qfetch('/users');
 ## Quick Start
 
 ```bash
-# Install core package
-npm install @qfetch/core
+# Install everything (recommended)
+npm install @qfetch/qfetch
 
-# Install middleware packages as needed
-# npm install @qfetch/middleware-<name>
+# Or install individual packages
+npm install @qfetch/core @qfetch/middleware-base-url
 ```
 
 ## Packages
 
-- **[@qfetch/core](packages/core)**: Core middleware composition system
+### Main
+
+| Package | Description |
+|---------|-------------|
+| [@qfetch/qfetch](packages/qfetch) | All-in-one package with core and all middlewares |
+| [@qfetch/core](packages/core) | Core middleware composition system |
+| [@qfetch/middlewares](packages/middlewares) | Collection of all middlewares (without core) |
+
+### Middlewares
+
+| Package | Description |
+|---------|-------------|
+| [@qfetch/middleware-authorization](packages/middleware-authorization) | Authorization header injection and 401 retry handling |
+| [@qfetch/middleware-base-url](packages/middleware-base-url) | Base URL resolution using standard URL constructor |
+| [@qfetch/middleware-headers](packages/middleware-headers) | Default headers for requests |
+| [@qfetch/middleware-query-params](packages/middleware-query-params) | Query parameters for request URLs |
+| [@qfetch/middleware-retry-after](packages/middleware-retry-after) | Server-directed retry timing (Retry-After header) |
+| [@qfetch/middleware-retry-status](packages/middleware-retry-status) | Client-controlled retry based on status codes |
 
 ## License
 
