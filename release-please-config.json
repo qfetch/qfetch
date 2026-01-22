@@ -70,6 +70,15 @@
 					"jsonpath": "$.version"
 				}
 			]
+		},
+		"packages/qfetch": {
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "jsr.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }
