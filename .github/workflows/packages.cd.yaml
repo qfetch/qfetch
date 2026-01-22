@@ -28,6 +28,8 @@ jobs:
       "packages/middleware-base-url--release_created": ${{ steps.release.outputs['packages/middleware-base-url--release_created'] }}
       "packages/middleware-authorization--tag_name": ${{ steps.release.outputs['packages/middleware-authorization--tag_name'] }}
       "packages/middleware-authorization--release_created": ${{ steps.release.outputs['packages/middleware-authorization--release_created'] }}
+      "packages/middleware-query-params--tag_name": ${{ steps.release.outputs['packages/middleware-query-params--tag_name'] }}
+      "packages/middleware-query-params--release_created": ${{ steps.release.outputs['packages/middleware-query-params--release_created'] }}
       # Add more outputs for other packages here
 
     steps:
@@ -87,3 +89,12 @@ jobs:
       package_path: "packages/middleware-authorization"
       package_name: "@qfetch/middleware-authorization"
       package_tag: ${{ needs.release-please.outputs['packages/middleware-authorization--tag_name'] }}
+
+  middleware-query-params:
+    needs: release-please
+    if: ${{ needs.release-please.outputs['packages/middleware-query-params--release_created'] == 'true' }}
+    uses: ./.github/workflows/_template.package-cd.yaml
+    with:
+      package_path: "packages/middleware-query-params"
+      package_name: "@qfetch/middleware-query-params"
+      package_tag: ${{ needs.release-please.outputs['packages/middleware-query-params--tag_name'] }}
