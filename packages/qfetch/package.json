@@ -1,5 +1,5 @@
 {
-	"name": "qfetch",
+	"name": "@qfetch/qfetch",
 	"description": "Composable fetch middlewares - includes core utilities and all official middlewares.",
 	"version": "0.1.0",
 	"author": "vabatta",

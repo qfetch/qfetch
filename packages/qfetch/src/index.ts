@@ -13,7 +13,7 @@
  *   withQueryParams,
  *   withRetryAfter,
  *   withRetryStatus,
- * } from "qfetch";
+ * } from "@qfetch/qfetch";
  *
  * const qfetch = compose(
  *   withRetryStatus({ statuses: [500, 502, 503] }),
