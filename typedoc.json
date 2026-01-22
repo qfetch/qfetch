@@ -10,12 +10,10 @@
 		"packages/middleware-retry-after",
 		"packages/middleware-retry-status",
 		"packages/middlewares",
-		"packages/qfetch",
-		"packages/test-utils"
+		"packages/qfetch"
 	],
 	"out": "docs",
 	"name": "qfetch",
-	"includeVersion": true,
 	"readme": "README.md",
 	"githubPages": true,
 	"navigation": {
