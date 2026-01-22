@@ -74,9 +74,9 @@ type QueryParamsOptions = {
 import { withQueryParam, withQueryParams } from '@qfetch/middleware-query-params';
 
 // Single parameter
-const qfetch = withQueryParam('api_key', 'secret123')(fetch);
+const qfetch = withQueryParam('version', 'v2')(fetch);
 await qfetch('https://api.example.com/users');
-// → https://api.example.com/users?api_key=secret123
+// → https://api.example.com/users?version=v2
 
 // Multiple parameters
 const qfetch = withQueryParams({
@@ -111,12 +111,12 @@ import { withBaseUrl } from '@qfetch/middleware-base-url';
 import { compose } from '@qfetch/core';
 
 const qfetch = compose(
-  withQueryParams({ api_key: 'secret123' }),
+  withQueryParams({ format: 'json', version: 'v2' }),
   withBaseUrl('https://api.example.com/v1/')
 )(fetch);
 
 await qfetch('users');
-// → https://api.example.com/v1/users?api_key=secret123
+// → https://api.example.com/v1/users?format=json&version=v2
 ```
 
 ## Notes

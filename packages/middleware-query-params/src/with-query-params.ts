@@ -320,12 +320,12 @@ export const withQueryParam: Middleware<
  *
  * // Composition with other middlewares
  * const qfetch = compose(
- *   withQueryParams({ api_key: "secret123" }),
+ *   withQueryParams({ format: "json", version: "v2" }),
  *   withBaseUrl("https://api.example.com")
  * )(fetch);
  *
  * await qfetch("/users");
- * // → https://api.example.com/users?api_key=secret123
+ * // → https://api.example.com/users?format=json&version=v2
  * ```
  *
  * @see {@link withQueryParam} for setting a single query parameter
@@ -339,7 +339,8 @@ export const withQueryParams: Middleware<
 	// Fast path: empty params (checked at creation time, not per-request)
 	const isParamsEmpty =
 		!params ||
-		params.constructor !== Object ||
+		typeof params !== "object" ||
+		Array.isArray(params) ||
 		Object.keys(params).length === 0;
 	if (isParamsEmpty) {
 		return (next) => (input, init) => next(input, init);
