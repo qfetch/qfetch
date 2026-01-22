@@ -64,11 +64,13 @@ const hasHeader = (
  * @param headers - The headers input (object or Headers instance)
  * @returns An iterable of [name, value] pairs
  */
-const normalizeHeaders = (
-	headers: HeadersInput,
-): Iterable<[string, string]> => {
+const normalizeHeaders = (headers: HeadersInput): Array<[string, string]> => {
 	if (headers instanceof Headers) {
-		return headers.entries();
+		const entries: Array<[string, string]> = [];
+		headers.forEach((value, name) => {
+			entries.push([name, value]);
+		});
+		return entries;
 	}
 	return Object.entries(headers);
 };
@@ -84,10 +86,11 @@ const isHeadersEmpty = (headers: HeadersInput): boolean => {
 
 	if (headers instanceof Headers) {
 		// Headers has no size property, check by iterating
-		for (const _ of headers.keys()) {
-			return false;
-		}
-		return true;
+		let hasAny = false;
+		headers.forEach(() => {
+			hasAny = true;
+		});
+		return !hasAny;
 	}
 
 	return (
@@ -116,11 +119,11 @@ const mergeHeaders = (
 
 	// If input is a Request, copy its headers (init headers take precedence)
 	if (input instanceof Request) {
-		for (const [name, value] of input.headers.entries()) {
+		input.headers.forEach((value, name) => {
 			if (!mergedHeaders.has(name)) {
 				mergedHeaders.set(name, value);
 			}
-		}
+		});
 	}
 
 	// Add middleware headers only if not already present

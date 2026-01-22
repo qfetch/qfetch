@@ -109,9 +109,9 @@ suite("withHeader - Unit", () => {
 				async (input: RequestInfo | URL, init?: RequestInit) => {
 					const headers = new Headers(init?.headers);
 					if (input instanceof Request) {
-						for (const [key, value] of input.headers.entries()) {
+						input.headers.forEach((value, key) => {
 							if (!headers.has(key)) headers.set(key, value);
-						}
+						});
 					}
 					return new Response(headers.get("Authorization"));
 				},
@@ -344,9 +344,9 @@ suite("withHeaders - Unit", () => {
 				async (input: RequestInfo | URL, init?: RequestInit) => {
 					const headers = new Headers(init?.headers);
 					if (input instanceof Request) {
-						for (const [key, value] of input.headers.entries()) {
+						input.headers.forEach((value, key) => {
 							if (!headers.has(key)) headers.set(key, value);
-						}
+						});
 					}
 					return new Response(
 						JSON.stringify({
