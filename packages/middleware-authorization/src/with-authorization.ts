@@ -307,7 +307,7 @@ const validateToken: (
 /**
  * The reason passed to body cancellation.
  */
-export const CANCEL_REASON = "Retry scheduled";
+const CANCEL_REASON = "Retry scheduled";
 
 /**
  * The `Authorization` HTTP request header name.

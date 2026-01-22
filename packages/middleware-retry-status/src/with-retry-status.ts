@@ -114,7 +114,7 @@ export const withRetryStatus: Middleware<[opts: RetryStatusOptions]> = (
 /**
  * The reason passed to body cancellation.
  */
-export const CANCEL_REASON = "Retry scheduled";
+const CANCEL_REASON = "Retry scheduled";
 
 /**
  * Default HTTP status codes that indicate a retryable condition.

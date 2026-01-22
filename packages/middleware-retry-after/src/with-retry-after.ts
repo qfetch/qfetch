@@ -142,7 +142,7 @@ export const withRetryAfter: Middleware<[opts: RetryAfterOptions]> = (opts) => {
 /**
  * The reason passed to body cancellation.
  */
-export const CANCEL_REASON = "Retry scheduled";
+const CANCEL_REASON = "Retry scheduled";
 
 /**
  * Regular expression matching `Retry-After` delay-seconds format (e.g., `"120"`).
