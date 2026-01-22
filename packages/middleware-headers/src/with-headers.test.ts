@@ -8,13 +8,10 @@ suite("withHeader - Unit", () => {
 		test("adds header to request with string URL", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(headers.get("X-Custom-Header"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("X-Custom-Header"));
+			});
 			const qfetch = withHeader("X-Custom-Header", "test-value")(fetchMock);
 
 			// Act
@@ -28,13 +25,10 @@ suite("withHeader - Unit", () => {
 		test("adds header to request with URL object", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(headers.get("Content-Type"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("Content-Type"));
+			});
 			const qfetch = withHeader("Content-Type", "application/json")(fetchMock);
 
 			// Act
@@ -52,13 +46,10 @@ suite("withHeader - Unit", () => {
 		test("adds header to request with Request object", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(headers.get("Accept"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("Accept"));
+			});
 			const qfetch = withHeader("Accept", "application/json")(fetchMock);
 
 			// Act
@@ -78,13 +69,10 @@ suite("withHeader - Unit", () => {
 		test("does not override header in init", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(headers.get("Content-Type"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("Content-Type"));
+			});
 			const qfetch = withHeader("Content-Type", "application/json")(fetchMock);
 
 			// Act
@@ -104,18 +92,15 @@ suite("withHeader - Unit", () => {
 		test("does not override header in Request object", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					if (input instanceof Request) {
-						input.headers.forEach((value, key) => {
-							if (!headers.has(key)) headers.set(key, value);
-						});
-					}
-					return new Response(headers.get("Authorization"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (input, init) => {
+				const headers = new Headers(init?.headers);
+				if (input instanceof Request) {
+					input.headers.forEach((value, key) => {
+						if (!headers.has(key)) headers.set(key, value);
+					});
+				}
+				return new Response(headers.get("Authorization"));
+			});
 			const qfetch = withHeader(
 				"Authorization",
 				"Bearer middleware",
@@ -139,13 +124,10 @@ suite("withHeader - Unit", () => {
 		test("handles case-insensitive header names", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(headers.get("content-type"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("content-type"));
+			});
 			const qfetch = withHeader("Content-Type", "application/json")(fetchMock);
 
 			// Act
@@ -167,14 +149,11 @@ suite("withHeader - Unit", () => {
 		test("preserves request method", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (input: RequestInfo | URL, init?: RequestInit) => {
-					const method =
-						init?.method ?? (input instanceof Request ? input.method : "GET");
-					return new Response(method);
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (input, init) => {
+				const method =
+					init?.method ?? (input instanceof Request ? input.method : "GET");
+				return new Response(method);
+			});
 			const qfetch = withHeader("X-Custom", "value")(fetchMock);
 
 			// Act
@@ -188,18 +167,15 @@ suite("withHeader - Unit", () => {
 		test("preserves existing init headers", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(
-						JSON.stringify({
-							custom: headers.get("X-Custom"),
-							existing: headers.get("X-Existing"),
-						}),
-					);
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(
+					JSON.stringify({
+						custom: headers.get("X-Custom"),
+						existing: headers.get("X-Existing"),
+					}),
+				);
+			});
 			const qfetch = withHeader("X-Custom", "new-value")(fetchMock);
 
 			// Act
@@ -224,18 +200,15 @@ suite("withHeaders - Unit", () => {
 		test("adds headers from plain object", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(
-						JSON.stringify({
-							contentType: headers.get("Content-Type"),
-							accept: headers.get("Accept"),
-						}),
-					);
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(
+					JSON.stringify({
+						contentType: headers.get("Content-Type"),
+						accept: headers.get("Accept"),
+					}),
+				);
+			});
 			const qfetch = withHeaders({
 				"Content-Type": "application/json",
 				Accept: "application/json",
@@ -261,18 +234,15 @@ suite("withHeaders - Unit", () => {
 		test("adds headers from Headers instance", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(
-						JSON.stringify({
-							contentType: headers.get("Content-Type"),
-							custom: headers.get("X-Custom"),
-						}),
-					);
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(
+					JSON.stringify({
+						contentType: headers.get("Content-Type"),
+						custom: headers.get("X-Custom"),
+					}),
+				);
+			});
 			const headersInput = new Headers();
 			headersInput.set("Content-Type", "application/json");
 			headersInput.set("X-Custom", "custom-value");
@@ -300,18 +270,15 @@ suite("withHeaders - Unit", () => {
 		test("does not override existing headers from init", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(
-						JSON.stringify({
-							contentType: headers.get("Content-Type"),
-							accept: headers.get("Accept"),
-						}),
-					);
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(
+					JSON.stringify({
+						contentType: headers.get("Content-Type"),
+						accept: headers.get("Accept"),
+					}),
+				);
+			});
 			const qfetch = withHeaders({
 				"Content-Type": "application/json",
 				Accept: "application/json",
@@ -339,23 +306,20 @@ suite("withHeaders - Unit", () => {
 		test("does not override headers from Request object", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(2);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					if (input instanceof Request) {
-						input.headers.forEach((value, key) => {
-							if (!headers.has(key)) headers.set(key, value);
-						});
-					}
-					return new Response(
-						JSON.stringify({
-							auth: headers.get("Authorization"),
-							custom: headers.get("X-Custom"),
-						}),
-					);
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (input, init) => {
+				const headers = new Headers(init?.headers);
+				if (input instanceof Request) {
+					input.headers.forEach((value, key) => {
+						if (!headers.has(key)) headers.set(key, value);
+					});
+				}
+				return new Response(
+					JSON.stringify({
+						auth: headers.get("Authorization"),
+						custom: headers.get("X-Custom"),
+					}),
+				);
+			});
 			const qfetch = withHeaders({
 				Authorization: "Bearer middleware",
 				"X-Custom": "middleware-value",
@@ -461,13 +425,10 @@ suite("withHeaders - Unit", () => {
 		test("works with string URL", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(headers.get("X-Custom"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("X-Custom"));
+			});
 			const qfetch = withHeaders({ "X-Custom": "value" })(fetchMock);
 
 			// Act
@@ -481,13 +442,10 @@ suite("withHeaders - Unit", () => {
 		test("works with URL object", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(headers.get("X-Custom"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("X-Custom"));
+			});
 			const qfetch = withHeaders({ "X-Custom": "value" })(fetchMock);
 
 			// Act
@@ -501,13 +459,10 @@ suite("withHeaders - Unit", () => {
 		test("works with Request object", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					const headers = new Headers(init?.headers);
-					return new Response(headers.get("X-Custom"));
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				const headers = new Headers(init?.headers);
+				return new Response(headers.get("X-Custom"));
+			});
 			const qfetch = withHeaders({ "X-Custom": "value" })(fetchMock);
 
 			// Act
@@ -523,14 +478,11 @@ suite("withHeaders - Unit", () => {
 		test("preserves method from init", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (input: RequestInfo | URL, init?: RequestInit) => {
-					const method =
-						init?.method ?? (input instanceof Request ? input.method : "GET");
-					return new Response(method);
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (input, init) => {
+				const method =
+					init?.method ?? (input instanceof Request ? input.method : "GET");
+				return new Response(method);
+			});
 			const qfetch = withHeaders({ "X-Custom": "value" })(fetchMock);
 
 			// Act
@@ -546,12 +498,9 @@ suite("withHeaders - Unit", () => {
 		test("preserves body from init", async (ctx: TestContext) => {
 			// Arrange
 			ctx.plan(1);
-			const fetchMock = ctx.mock.fn(
-				fetch,
-				async (_input: RequestInfo | URL, init?: RequestInit) => {
-					return new Response(init?.body as string);
-				},
-			);
+			const fetchMock = ctx.mock.fn(fetch, async (_input, init) => {
+				return new Response(init?.body as string);
+			});
 			const qfetch = withHeaders({ "Content-Type": "application/json" })(
 				fetchMock,
 			);
