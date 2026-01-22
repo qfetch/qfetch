@@ -1,0 +1,27 @@
+{
+	"$schema": "https://typedoc.org/schema.json",
+	"entryPointStrategy": "packages",
+	"entryPoints": [
+		"packages/core",
+		"packages/middleware-authorization",
+		"packages/middleware-base-url",
+		"packages/middleware-headers",
+		"packages/middleware-query-params",
+		"packages/middleware-retry-after",
+		"packages/middleware-retry-status",
+		"packages/middlewares",
+		"packages/qfetch",
+		"packages/test-utils"
+	],
+	"out": "docs",
+	"name": "qfetch",
+	"readme": "README.md",
+	"githubPages": true,
+	"navigation": {
+		"includeCategories": true,
+		"includeGroups": true
+	},
+	"categorizeByGroup": true,
+	"searchInComments": true,
+	"cleanOutputDir": true
+}

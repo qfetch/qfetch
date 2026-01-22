@@ -8,6 +8,7 @@
 		"syncpack": "13.0.4",
 		"tsdown": "catalog:",
 		"turbo": "2.6.0",
+		"typedoc": "0.28.16",
 		"typescript": "catalog:"
 	},
 	"engines": {
@@ -17,6 +18,7 @@
 	"private": true,
 	"scripts": {
 		"build": "turbo build",
+		"docs": "typedoc",
 		"check-types": "turbo check-types",
 		"dev": "turbo watch build check-types test",
 		"generate": "turbo gen",
