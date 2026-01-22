@@ -15,6 +15,7 @@
 	],
 	"out": "docs",
 	"name": "qfetch",
+	"includeVersion": true,
 	"readme": "README.md",
 	"githubPages": true,
 	"navigation": {
