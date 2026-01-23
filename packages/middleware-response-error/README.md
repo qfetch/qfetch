@@ -12,6 +12,51 @@ Intended for use with the composable middleware system provided by [`@qfetch/cor
 npm install @qfetch/middleware-response-error
 ```
 
+## API
+
+### `withResponseError(opts?)`
+
+Creates a middleware that throws errors for HTTP responses based on status codes.
+
+#### Parameters
+
+- `opts` - Optional configuration object:
+  - `statusMap?: Map<number, ResponseErrorMapper>` - Maps specific status codes to custom error mappers. Takes priority over `defaultMapper`.
+  - `defaultMapper?: ResponseErrorMapper` - Creates errors for status codes not in `statusMap`. Defaults to `(response) => new ResponseError(response)`.
+  - `throwOnStatusCode?: (code: number) => boolean` - Determines whether to throw for a given status code. Defaults to `(code) => code >= 400`.
+
+#### Types
+
+```typescript
+type ResponseErrorMapper = (response: Response) => unknown | Promise<unknown>;
+```
+
+#### Returns
+
+A middleware function compatible with `@qfetch/core`.
+
+### `ResponseError`
+
+Default error class thrown for failed HTTP responses.
+
+#### Constructor
+
+```typescript
+new ResponseError(response: Response, options?: ErrorOptions)
+```
+
+- `response` - The HTTP response that triggered the error
+- `options` - Standard Error options, including `cause` for error chaining
+
+#### Properties
+
+- `status: number` - The HTTP status code
+- `statusText: string` - The HTTP status text
+- `url: string` - The URL of the failed request
+- `response: Response` - The full response object (body can still be read)
+- `message: string` - Formatted as `"HTTP {status} {statusText}: {url}"`
+- `cause?: unknown` - The underlying cause if provided via options
+
 ## Usage
 
 ```typescript
@@ -102,52 +147,7 @@ const qfetch = compose(
 )(fetch);
 ```
 
-## API
-
-### `withResponseError(opts?)`
-
-Creates a middleware that throws errors for HTTP responses based on status codes.
-
-#### Parameters
-
-- `opts` - Optional configuration object:
-  - `statusMap?: Map<number, ResponseErrorMapper>` - Maps specific status codes to custom error mappers. Takes priority over `defaultMapper`.
-  - `defaultMapper?: ResponseErrorMapper` - Creates errors for status codes not in `statusMap`. Defaults to `(response) => new ResponseError(response)`.
-  - `throwOnStatusCode?: (code: number) => boolean` - Determines whether to throw for a given status code. Defaults to `(code) => code >= 400`.
-
-#### Types
-
-```typescript
-type ResponseErrorMapper = (response: Response) => unknown | Promise<unknown>;
-```
-
-#### Returns
-
-A middleware function compatible with `@qfetch/core`.
-
-### `ResponseError`
-
-Default error class thrown for failed HTTP responses.
-
-#### Constructor
-
-```typescript
-new ResponseError(response: Response, options?: ErrorOptions)
-```
-
-- `response` - The HTTP response that triggered the error
-- `options` - Standard Error options, including `cause` for error chaining
-
-#### Properties
-
-- `status: number` - The HTTP status code
-- `statusText: string` - The HTTP status text
-- `url: string` - The URL of the failed request
-- `response: Response` - The full response object (body can still be read)
-- `message: string` - Formatted as `"HTTP {status} {statusText}: {url}"`
-- `cause?: unknown` - The underlying cause if provided via options
-
-## Behavior
+## Notes
 
 - **Successful responses (status < 400)**: Pass through unchanged
 - **Error responses (status >= 400)**: Throw an error using the configured mapper
