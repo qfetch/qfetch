@@ -22,6 +22,7 @@ jobs:
       "packages/middleware-authorization": ${{ steps.filter.outputs['packages/middleware-authorization'] }}
       "packages/middleware-query-params": ${{ steps.filter.outputs['packages/middleware-query-params'] }}
       "packages/middleware-headers": ${{ steps.filter.outputs['packages/middleware-headers'] }}
+      "packages/middleware-response-error": ${{ steps.filter.outputs['packages/middleware-response-error'] }}
       "packages/qfetch": ${{ steps.filter.outputs['packages/qfetch'] }}
       "packages/middlewares": ${{ steps.filter.outputs['packages/middlewares'] }}
 
@@ -56,6 +57,9 @@ jobs:
               - '.github/workflows/_template.package-ci.yaml'
             'packages/middleware-headers':
               - 'packages/middleware-headers/**'
+              - '.github/workflows/_template.package-ci.yaml'
+            'packages/middleware-response-error':
+              - 'packages/middleware-response-error/**'
               - '.github/workflows/_template.package-ci.yaml'
             'packages/qfetch':
               - 'packages/qfetch/**'
@@ -119,6 +123,14 @@ jobs:
     with:
       package_path: "packages/middleware-headers"
       package_name: "@qfetch/middleware-headers"
+
+  middleware-response-error:
+    needs: detect-changes
+    if: needs.detect-changes.outputs['packages/middleware-response-error'] == 'true'
+    uses: ./.github/workflows/_template.package-ci.yaml
+    with:
+      package_path: "packages/middleware-response-error"
+      package_name: "@qfetch/middleware-response-error"
 
   qfetch:
     needs: detect-changes

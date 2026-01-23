@@ -7,6 +7,7 @@
 		"packages/middleware-base-url",
 		"packages/middleware-headers",
 		"packages/middleware-query-params",
+		"packages/middleware-response-error",
 		"packages/middleware-retry-after",
 		"packages/middleware-retry-status",
 		"packages/middlewares",
