@@ -1,5 +1,16 @@
 {
 	"$schema": "https://typedoc.org/schema.json",
+	"externalSymbolLinkMappings": {
+		"typescript": {
+			"Response": "https://developer.mozilla.org/en-US/docs/Web/API/Response",
+			"Request": "https://developer.mozilla.org/en-US/docs/Web/API/Request",
+			"Headers": "https://developer.mozilla.org/en-US/docs/Web/API/Headers",
+			"URL": "https://developer.mozilla.org/en-US/docs/Web/API/URL",
+			"URLSearchParams": "https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams",
+			"AbortSignal": "https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal",
+			"ReadableStream": "https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream"
+		}
+	},
 	"entryPointStrategy": "packages",
 	"entryPoints": [
 		"packages/core",
