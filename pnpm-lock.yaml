@@ -185,6 +185,9 @@ importers:
       '@qfetch/middleware-query-params':
         specifier: workspace:^
         version: link:../middleware-query-params
+      '@qfetch/middleware-response-error':
+        specifier: workspace:^
+        version: link:../middleware-response-error
       '@qfetch/middleware-retry-after':
         specifier: workspace:^
         version: link:../middleware-retry-after
@@ -216,6 +219,9 @@ importers:
       '@qfetch/middleware-query-params':
         specifier: workspace:^
         version: link:../middleware-query-params
+      '@qfetch/middleware-response-error':
+        specifier: workspace:^
+        version: link:../middleware-response-error
       '@qfetch/middleware-retry-after':
         specifier: workspace:^
         version: link:../middleware-retry-after

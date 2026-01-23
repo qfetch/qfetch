@@ -9,6 +9,7 @@
 		"@qfetch/middleware-base-url": "workspace:^",
 		"@qfetch/middleware-headers": "workspace:^",
 		"@qfetch/middleware-query-params": "workspace:^",
+		"@qfetch/middleware-response-error": "workspace:^",
 		"@qfetch/middleware-retry-after": "workspace:^",
 		"@qfetch/middleware-retry-status": "workspace:^"
 	},
@@ -37,6 +38,7 @@
 		"http",
 		"middleware",
 		"query-params",
+		"response-error",
 		"retry",
 		"typescript"
 	],
