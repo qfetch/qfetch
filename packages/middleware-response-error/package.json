@@ -24,9 +24,13 @@
 	"homepage": "https://github.com/qfetch/qfetch/tree/main/packages/middleware-response-error#readme",
 	"keywords": [
 		"composable",
+		"error",
 		"fetch",
 		"http",
-		"middleware"
+		"middleware",
+		"response-error",
+		"status-code",
+		"typescript"
 	],
 	"license": "MIT",
 	"main": "./dist/index.cjs",
