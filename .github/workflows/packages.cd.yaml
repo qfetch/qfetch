@@ -120,7 +120,7 @@ jobs:
     uses: ./.github/workflows/_template.package-cd.yaml
     with:
       package_path: "packages/qfetch"
-      package_name: "qfetch"
+      package_name: "@qfetch/qfetch"
       package_tag: ${{ needs.release-please.outputs['packages/qfetch--tag_name'] }}
 
   middlewares:
