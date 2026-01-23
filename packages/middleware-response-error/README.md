@@ -129,6 +129,15 @@ A middleware function compatible with `@qfetch/core`.
 
 Default error class thrown for failed HTTP responses.
 
+#### Constructor
+
+```typescript
+new ResponseError(response: Response, options?: ErrorOptions)
+```
+
+- `response` - The HTTP response that triggered the error
+- `options` - Standard Error options, including `cause` for error chaining
+
 #### Properties
 
 - `status: number` - The HTTP status code
@@ -136,6 +145,7 @@ Default error class thrown for failed HTTP responses.
 - `url: string` - The URL of the failed request
 - `response: Response` - The full response object (body can still be read)
 - `message: string` - Formatted as `"HTTP {status} {statusText}: {url}"`
+- `cause?: unknown` - The underlying cause if provided via options
 
 ## Behavior
 
@@ -143,6 +153,7 @@ Default error class thrown for failed HTTP responses.
 - **Error responses (status >= 400)**: Throw an error using the configured mapper
 - **Async mappers**: Fully supported for reading response body before throwing
 - **Response preservation**: The original `Response` object is preserved in `ResponseError` for later body reading
+- **Mapper errors**: If the mapper itself throws (e.g., JSON parse error), that error propagates directly without wrapping
 
 ## Standards References
 

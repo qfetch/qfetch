@@ -90,8 +90,17 @@ export class ResponseError extends Error {
 	 */
 	readonly response: Response;
 
-	constructor(response: Response) {
-		super(`HTTP ${response.status} ${response.statusText}: ${response.url}`);
+	/**
+	 * Creates a new ResponseError.
+	 *
+	 * @param response - The HTTP response that triggered the error
+	 * @param options - Standard Error options, including `cause` for error chaining
+	 */
+	constructor(response: Response, options?: ErrorOptions) {
+		super(
+			`HTTP ${response.status} ${response.statusText}: ${response.url}`,
+			options,
+		);
 		this.name = "ResponseError";
 		this.status = response.status;
 		this.statusText = response.statusText;

@@ -1,6 +1,6 @@
 {
 	"name": "@qfetch/middleware-response-error",
-	"description": "Fetch middleware",
+	"description": "Middleware that throws errors for HTTP responses based on status codes",
 	"version": "0.1.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
