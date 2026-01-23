@@ -71,7 +71,7 @@ export type AuthorizationToken = {
  * }
  * ```
  */
-export type TokenProvider = {
+export interface TokenProvider {
 	/**
 	 * Retrieves the current authorization credentials.
 	 *
@@ -82,7 +82,7 @@ export type TokenProvider = {
 	 * @throws If token retrieval fails, the error propagates to the caller.
 	 */
 	getToken(): Promise<AuthorizationToken>;
-};
+}
 
 /**
  * Configuration options for the {@link withAuthorization} middleware.

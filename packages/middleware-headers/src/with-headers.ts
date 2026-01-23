@@ -191,6 +191,7 @@ const mergeHeaders = (
  * ```
  *
  * @see {@link withHeaders} for setting multiple headers at once
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-header-fields RFC 9110 - Header Fields}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/Headers MDN: Headers}
  */
 export const withHeader: Middleware<[name: string, value: string]> = (
@@ -277,6 +278,7 @@ export const withHeader: Middleware<[name: string, value: string]> = (
  * ```
  *
  * @see {@link withHeader} for setting a single header
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-header-fields RFC 9110 - Header Fields}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/Headers MDN: Headers}
  */
 export const withHeaders: Middleware<[headers: HeadersInput]> = (headers) => {
