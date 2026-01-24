@@ -14,15 +14,10 @@
  * HYBRID approach (positional + optional object):
  * - `withQueryParam(name, value, opts?)` - required values + optional config
  *
- * Examples:
- * - Positional: `Middleware<[baseUrl: string | URL]>`
- * - Object: `Middleware<[opts: RetryOptions]>`
- * - Hybrid: `Middleware<[name: string, value: string, opts?: Options]>`
- *
  * Delete this comment block after reading.
  */
 
-import type { Middleware } from "@qfetch/core";
+import type { MiddlewareExecutor } from "@qfetch/core";
 
 /**
  * Configuration options for the {@link with{{pascalCase middlewareName}} } middleware.
@@ -62,9 +57,9 @@ export type {{pascalCase middlewareName}}Options = {
  * await qfetch("https://example.com");
  * ```
  */
-export const with{{pascalCase middlewareName}}: Middleware<[opts: {{pascalCase middlewareName}}Options]> = (
-	opts,
-) => {
+export function with{{pascalCase middlewareName}}(
+	opts: {{pascalCase middlewareName}}Options,
+): MiddlewareExecutor {
 	// TODO: Extract and validate options
 	// const {} = opts;
 
@@ -82,7 +77,7 @@ export const with{{pascalCase middlewareName}}: Middleware<[opts: {{pascalCase m
 
 		return response;
 	};
-};
+}
 
 // TODO: Add helper functions below if needed
 // /**
