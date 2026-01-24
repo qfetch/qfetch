@@ -1,4 +1,4 @@
-import type { Middleware } from "@qfetch/core";
+import type { MiddlewareExecutor } from "@qfetch/core";
 
 /**
  * Function that creates an error from a response.
@@ -140,9 +140,9 @@ export class ResponseError extends Error {
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/Response/ok MDN: Response.ok}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Status MDN: HTTP Status Codes}
  */
-export const withResponseError: Middleware<[opts?: ResponseErrorOptions]> = (
-	opts = {},
-) => {
+export function withResponseError(
+	opts: ResponseErrorOptions = {},
+): MiddlewareExecutor {
 	const {
 		statusMap = new Map(),
 		defaultMapper = (response) => new ResponseError(response),
@@ -163,4 +163,4 @@ export const withResponseError: Middleware<[opts?: ResponseErrorOptions]> = (
 		// Await mapper result (works for both sync and async)
 		throw await mapper(response);
 	};
-};
+}

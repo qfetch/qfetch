@@ -1,5 +1,5 @@
 import { type BackoffStrategy, waitFor } from "@proventuslabs/retry-strategies";
-import type { Middleware } from "@qfetch/core";
+import type { MiddlewareExecutor } from "@qfetch/core";
 
 /**
  * Configuration options for the {@link withRetryAfter} middleware.
@@ -78,7 +78,7 @@ export type RetryAfterOptions = {
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3 RFC 9110 §10.2.3 - Retry-After}
  */
-export const withRetryAfter: Middleware<[opts: RetryAfterOptions]> = (opts) => {
+export function withRetryAfter(opts: RetryAfterOptions): MiddlewareExecutor {
 	const maxServerDelay =
 		typeof opts.maxServerDelay !== "number" || opts.maxServerDelay < 0
 			? NaN
@@ -137,7 +137,7 @@ export const withRetryAfter: Middleware<[opts: RetryAfterOptions]> = (opts) => {
 
 		return response;
 	};
-};
+}
 
 /**
  * The reason passed to body cancellation.

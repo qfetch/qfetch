@@ -1,5 +1,5 @@
 import { type BackoffStrategy, waitFor } from "@proventuslabs/retry-strategies";
-import type { Middleware } from "@qfetch/core";
+import type { MiddlewareExecutor } from "@qfetch/core";
 
 /**
  * Token credentials returned by a {@link TokenProvider}.
@@ -71,7 +71,7 @@ export type AuthorizationToken = {
  * }
  * ```
  */
-export type TokenProvider = {
+export interface TokenProvider {
 	/**
 	 * Retrieves the current authorization credentials.
 	 *
@@ -82,7 +82,7 @@ export type TokenProvider = {
 	 * @throws If token retrieval fails, the error propagates to the caller.
 	 */
 	getToken(): Promise<AuthorizationToken>;
-};
+}
 
 /**
  * Configuration options for the {@link withAuthorization} middleware.
@@ -168,9 +168,9 @@ export type AuthorizationOptions = {
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-401-unauthorized RFC 9110 - 401 Unauthorized}
  * @see {@link https://www.rfc-editor.org/rfc/rfc6750.html RFC 6750 - Bearer Token Usage}
  */
-export const withAuthorization: Middleware<[opts: AuthorizationOptions]> = (
-	opts,
-) => {
+export function withAuthorization(
+	opts: AuthorizationOptions,
+): MiddlewareExecutor {
 	const { tokenProvider } = opts;
 
 	return (next) => async (input, init) => {
@@ -219,7 +219,7 @@ export const withAuthorization: Middleware<[opts: AuthorizationOptions]> = (
 
 		return response;
 	};
-};
+}
 
 /**
  * Prepares a RequestInit with the Authorization header injected.

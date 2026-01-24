@@ -1,4 +1,4 @@
-import type { Middleware } from "@qfetch/core";
+import type { MiddlewareExecutor } from "@qfetch/core";
 
 /**
  * Middleware that resolves string fetch requests against a base URL.
@@ -36,7 +36,7 @@ import type { Middleware } from "@qfetch/core";
  * @see {@link https://url.spec.whatwg.org/ WHATWG URL Standard}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/URL MDN: URL API}
  */
-export const withBaseUrl: Middleware<[baseUrl: string | URL]> = (baseUrl) => {
+export function withBaseUrl(baseUrl: string | URL): MiddlewareExecutor {
 	const base = new URL(baseUrl);
 
 	return (next) => async (input, init) => {
@@ -48,4 +48,4 @@ export const withBaseUrl: Middleware<[baseUrl: string | URL]> = (baseUrl) => {
 
 		return next(input, init);
 	};
-};
+}

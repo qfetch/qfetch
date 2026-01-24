@@ -1,4 +1,4 @@
-import type { Middleware } from "@qfetch/core";
+import type { MiddlewareExecutor } from "@qfetch/core";
 
 /**
  * Header entries as name-value pairs.
@@ -154,7 +154,7 @@ const mergeHeaders = (
  *
  * @param name - The header name
  * @param value - The header value
- * @returns A fetch executor that adds the header to requests
+ * @returns A middleware executor that adds the header to requests
  *
  * @example
  * ```ts
@@ -191,12 +191,10 @@ const mergeHeaders = (
  * ```
  *
  * @see {@link withHeaders} for setting multiple headers at once
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-header-fields RFC 9110 - Header Fields}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/Headers MDN: Headers}
  */
-export const withHeader: Middleware<[name: string, value: string]> = (
-	name,
-	value,
-) => {
+export function withHeader(name: string, value: string): MiddlewareExecutor {
 	return (next) => async (input, init) => {
 		// Skip if header already exists in request
 		if (hasHeader(input, init, name)) {
@@ -206,7 +204,7 @@ export const withHeader: Middleware<[name: string, value: string]> = (
 		const mergedInit = mergeHeaders(input, init, { [name]: value });
 		return next(input, mergedInit);
 	};
-};
+}
 
 /**
  * Middleware that adds multiple headers to outgoing fetch requests.
@@ -230,7 +228,7 @@ export const withHeader: Middleware<[name: string, value: string]> = (
  * - Works with both string URLs and Request objects
  *
  * @param headers - Object or Headers instance with header name-value pairs
- * @returns A fetch executor that adds the headers to requests
+ * @returns A middleware executor that adds the headers to requests
  *
  * @example
  * ```ts
@@ -277,9 +275,10 @@ export const withHeader: Middleware<[name: string, value: string]> = (
  * ```
  *
  * @see {@link withHeader} for setting a single header
+ * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-header-fields RFC 9110 - Header Fields}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/Headers MDN: Headers}
  */
-export const withHeaders: Middleware<[headers: HeadersInput]> = (headers) => {
+export function withHeaders(headers: HeadersInput): MiddlewareExecutor {
 	// Fast path: empty headers (checked at creation time, not per-request)
 	if (isHeadersEmpty(headers)) {
 		return (next) => (input, init) => next(input, init);
@@ -289,4 +288,4 @@ export const withHeaders: Middleware<[headers: HeadersInput]> = (headers) => {
 		const mergedInit = mergeHeaders(input, init, headers);
 		return next(input, mergedInit);
 	};
-};
+}

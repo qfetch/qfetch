@@ -1,11 +1,12 @@
 # @qfetch/middleware-{{kebabCase middlewareName}}
 
+[TODO: One-liner description]
+
 ## Overview
 
-[TODO: Add a clear, concise description of what this middleware does and its primary purpose.
-Include references to relevant web standards (RFC, MDN, etc.) if applicable.]
+[TODO: 2-3 sentences covering what it does, key behavior, and standards compliance]
 
-Intended for use with the composable middleware system provided by [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
+Intended for use with [`@qfetch/core`](https://github.com/qfetch/qfetch/tree/main/packages/core#readme).
 
 ## Installation
 
@@ -13,58 +14,30 @@ Intended for use with the composable middleware system provided by [`@qfetch/cor
 npm install @qfetch/middleware-{{kebabCase middlewareName}}
 ```
 
-## Usage
-
-```typescript
-import { with{{pascalCase middlewareName}} } from '@qfetch/middleware-{{kebabCase middlewareName}}';
-
-const qfetch = with{{pascalCase middlewareName}}({
-  // TODO: Add configuration options
-})(fetch);
-
-await qfetch('https://api.example.com/data');
-```
-
-### Composition with Other Middlewares
+## Quick Start
 
 ```typescript
 import { with{{pascalCase middlewareName}} } from '@qfetch/middleware-{{kebabCase middlewareName}}';
 import { compose } from '@qfetch/core';
 
+// [TODO: Real-world example showing practical usage]
 const qfetch = compose(
-  with{{pascalCase middlewareName}}({ /* options */ }),
+  with{{pascalCase middlewareName}}({
+    // options
+  }),
   // other middlewares...
 )(fetch);
 
-await qfetch('https://api.example.com/data');
+await qfetch('https://api.example.com/resource');
 ```
 
-## API
+## Documentation
 
-### `with{{pascalCase middlewareName}}(opts)`
-
-[TODO: Brief description of the middleware function]
-
-#### Parameters
-
-- `opts` - Configuration object with the following properties:
-  - [TODO: Document each option with type, description, and default value]
-
-#### Returns
-
-A middleware function compatible with `@qfetch/core`.
-
-## Behavior
-
-[TODO: Document key behaviors, edge cases, and how the middleware handles various scenarios]
-
-## Limitations
-
-[TODO: Document known limitations, browser compatibility issues, or constraints]
+For complete API reference, examples, and type definitions, see the [API documentation](https://qfetch.github.io/qfetch/modules/_qfetch_middleware_{{kebabCase middlewareName}}.html).
 
 ## Standards References
 
-[TODO: If applicable, add links to relevant standards]
+[TODO: Add relevant standards]
 
-- [Example: RFC XXXX - Standard Name](https://example.com)
-- [Example: MDN - API Name](https://developer.mozilla.org)
+- [RFC XXXX - Standard Name](https://example.com)
+- [MDN - API Name](https://developer.mozilla.org)
