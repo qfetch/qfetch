@@ -1,5 +1,6 @@
 {
   "packages/core": "0.2.0",
+  "packages/middleware-authorization": "0.1.0",
   "packages/middleware-base-url": "0.1.0",
   "packages/middleware-retry-after": "0.1.1",
   "packages/middleware-retry-status": "0.1.0"
