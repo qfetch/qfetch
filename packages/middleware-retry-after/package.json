@@ -1,7 +1,7 @@
 {
 	"name": "@qfetch/middleware-retry-after",
 	"description": "Fetch middleware for server-directed retry timing based on Retry-After headers.",
-	"version": "0.1.1",
+	"version": "0.2.0",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
 	"devDependencies": {
