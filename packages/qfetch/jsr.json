@@ -3,6 +3,16 @@
 	"name": "@qfetch/qfetch",
 	"version": "0.1.0",
 	"exports": "./src/index.ts",
+	"imports": {
+		"@qfetch/core": "jsr:@qfetch/core@0.2",
+		"@qfetch/middleware-authorization": "jsr:@qfetch/middleware-authorization@0.1",
+		"@qfetch/middleware-base-url": "jsr:@qfetch/middleware-base-url@0.1",
+		"@qfetch/middleware-headers": "jsr:@qfetch/middleware-headers@0.1",
+		"@qfetch/middleware-query-params": "jsr:@qfetch/middleware-query-params@0.1",
+		"@qfetch/middleware-response-error": "jsr:@qfetch/middleware-response-error@0.1",
+		"@qfetch/middleware-retry-after": "jsr:@qfetch/middleware-retry-after@0.1",
+		"@qfetch/middleware-retry-status": "jsr:@qfetch/middleware-retry-status@0.1"
+	},
 	"publish": {
 		"include": ["src/**/*.ts", "README.md", "LICENSE", "jsr.json"]
 	}
