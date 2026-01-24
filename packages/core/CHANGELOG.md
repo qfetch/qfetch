@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/qfetch/qfetch/compare/core@v0.2.0...core@v0.2.1) (2026-01-24)
+
+
+### Documentation
+
+* **core:** align README with middleware package format ([#80](https://github.com/qfetch/qfetch/issues/80)) ([a19b2ae](https://github.com/qfetch/qfetch/commit/a19b2ae7cd5452aa64f0514d1e715eedb650a814))
+
 ## [0.2.0](https://github.com/qfetch/qfetch/compare/core@v0.1.0...core@v0.2.0) (2026-01-24)
 
 
