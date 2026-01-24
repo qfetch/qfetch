@@ -12,43 +12,12 @@ Provides TypeScript types and composition utilities for building middleware that
 npm install @qfetch/core
 ```
 
-## API
-
-### Types
-
-- `FetchFunction` - Compatible with native fetch API
-- `FetchExecutor` - Function that wraps a fetch function with middleware logic
-- `Middleware<T>` - Factory for creating middleware executors with typed arguments
-
-### Middleware Type
-
-The `Middleware<T>` type uses tuple generics for type-safe argument definitions:
-
-```typescript
-// No arguments
-const withLogger: Middleware = () => (next) => async (input, init) => { ... };
-
-// Single argument
-const withBaseUrl: Middleware<[baseUrl: string | URL]> = (baseUrl) => { ... };
-
-// Multiple arguments
-const withHeader: Middleware<[name: string, value: string]> = (name, value) => { ... };
-
-// Optional arguments
-const withTimeout: Middleware<[ms: number, opts?: Options]> = (ms, opts?) => { ... };
-```
-
-### Composition
-
-- `compose(...middlewares)` - Right-to-left composition (functional style)
-- `pipeline(...middlewares)` - Left-to-right composition (pipeline style)
-
-## Usage
+## Quick Start
 
 ```typescript
 import { compose, pipeline, type Middleware } from '@qfetch/core';
 
-// Create a simple middleware (no arguments)
+// Create a simple logging middleware
 const withLogger: Middleware = () => (next) => async (input, init) => {
   console.log('Request:', input);
   const response = await next(input, init);
@@ -56,7 +25,7 @@ const withLogger: Middleware = () => (next) => async (input, init) => {
   return response;
 };
 
-// Compose with other middlewares
+// Compose middlewares (right-to-left execution)
 const qfetch = compose(
   withLogger(),
   // other middlewares...
@@ -67,5 +36,15 @@ const qfetch2 = pipeline(
   withLogger(),
   // other middlewares...
 )(fetch);
+
+await qfetch('https://api.example.com/users');
 ```
 
+## Documentation
+
+For complete API reference, examples, and type definitions, see the [API documentation](https://qfetch.github.io/qfetch/modules/_qfetch_core.html).
+
+## Standards References
+
+- [MDN: Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) - Native fetch interface
+- [WHATWG Fetch Standard](https://fetch.spec.whatwg.org/) - Fetch specification
