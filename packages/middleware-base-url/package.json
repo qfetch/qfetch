@@ -1,7 +1,7 @@
 {
 	"name": "@qfetch/middleware-base-url",
 	"description": "Fetch middleware for base URL resolution using standard URL constructor behavior.",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"author": "vabatta",
 	"bugs": "https://github.com/qfetch/qfetch/issues",
 	"devDependencies": {
