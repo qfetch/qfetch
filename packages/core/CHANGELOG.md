@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/qfetch/qfetch/compare/core@v0.2.1...core@v0.2.2) (2026-01-24)
+
+
+### Documentation
+
+* **core:** fix README examples to match actual API ([#82](https://github.com/qfetch/qfetch/issues/82)) ([8ff39cd](https://github.com/qfetch/qfetch/commit/8ff39cd06c2a612f213ca7aad5c0debaeb52ce07))
+
 ## [0.2.1](https://github.com/qfetch/qfetch/compare/core@v0.2.0...core@v0.2.1) (2026-01-24)
 
 
