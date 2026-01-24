@@ -1,5 +1,5 @@
 import { type BackoffStrategy, waitFor } from "@proventuslabs/retry-strategies";
-import type { Middleware } from "@qfetch/core";
+import type { MiddlewareExecutor } from "@qfetch/core";
 
 /**
  * Configuration options for the {@link withRetryStatus} middleware.
@@ -67,9 +67,7 @@ export type RetryStatusOptions = {
  *
  * @see {@link https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes RFC 9110 - Status Codes}
  */
-export const withRetryStatus: Middleware<[opts: RetryStatusOptions]> = (
-	opts,
-) => {
+export function withRetryStatus(opts: RetryStatusOptions): MiddlewareExecutor {
 	// Get the set of retryable status codes, defaulting to the standard set
 	const retryableStatuses =
 		opts.retryableStatuses ?? DEFAULT_RETRYABLE_STATUSES;
@@ -109,7 +107,7 @@ export const withRetryStatus: Middleware<[opts: RetryStatusOptions]> = (
 
 		return response;
 	};
-};
+}
 
 /**
  * The reason passed to body cancellation.

@@ -2,7 +2,7 @@ import { describe, suite, type TestContext, test } from "node:test";
 
 import { createTestServer, type RequestHandler } from "@qfetch/test-utils";
 
-import { compose, type FetchExecutor, pipeline } from "./framework.ts";
+import { compose, type MiddlewareExecutor, pipeline } from "./framework.ts";
 
 /* node:coverage disable */
 
@@ -36,14 +36,14 @@ suite("framework - Integration", { concurrency: true }, () => {
 
 			const calls: string[] = [];
 
-			const mw1: FetchExecutor = (next) => async (input, init) => {
+			const mw1: MiddlewareExecutor = (next) => async (input, init) => {
 				calls.push("mw1-before");
 				const res = await next(input, init);
 				calls.push("mw1-after");
 				return res;
 			};
 
-			const mw2: FetchExecutor = (next) => async (input, init) => {
+			const mw2: MiddlewareExecutor = (next) => async (input, init) => {
 				calls.push("mw2-before");
 				const res = await next(input, init);
 				calls.push("mw2-after");
@@ -72,7 +72,7 @@ suite("framework - Integration", { concurrency: true }, () => {
 			ctx.plan(2);
 			const { baseUrl } = await createTestServer(ctx, frameworkTestHandler);
 
-			const addHeader: FetchExecutor = (next) => async (input, init) => {
+			const addHeader: MiddlewareExecutor = (next) => async (input, init) => {
 				const headers = new Headers(init?.headers);
 				headers.set("X-Custom-Header", "test-value");
 				return next(input, { ...init, headers });
@@ -125,14 +125,14 @@ suite("framework - Integration", { concurrency: true }, () => {
 
 			const calls: string[] = [];
 
-			const mw1: FetchExecutor = (next) => async (input, init) => {
+			const mw1: MiddlewareExecutor = (next) => async (input, init) => {
 				calls.push("mw1-before");
 				const res = await next(input, init);
 				calls.push("mw1-after");
 				return res;
 			};
 
-			const mw2: FetchExecutor = (next) => async (input, init) => {
+			const mw2: MiddlewareExecutor = (next) => async (input, init) => {
 				calls.push("mw2-before");
 				const res = await next(input, init);
 				calls.push("mw2-after");
@@ -161,7 +161,7 @@ suite("framework - Integration", { concurrency: true }, () => {
 			ctx.plan(2);
 			const { baseUrl } = await createTestServer(ctx, frameworkTestHandler);
 
-			const addHeader: FetchExecutor = (next) => async (input, init) => {
+			const addHeader: MiddlewareExecutor = (next) => async (input, init) => {
 				const headers = new Headers(init?.headers);
 				headers.set("X-Custom-Header", "pipeline-value");
 				return next(input, { ...init, headers });

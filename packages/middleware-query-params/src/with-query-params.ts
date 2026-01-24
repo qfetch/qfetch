@@ -1,4 +1,4 @@
-import type { Middleware } from "@qfetch/core";
+import type { MiddlewareExecutor } from "@qfetch/core";
 
 /**
  * A query parameter value - either a single string or an array of strings.
@@ -217,9 +217,11 @@ const mergeParams = (
  * @see {@link withQueryParams} for setting multiple query parameters at once
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams MDN: URLSearchParams}
  */
-export const withQueryParam: Middleware<
-	[name: string, value: QueryParamValue, options?: QueryParamsOptions]
-> = (name, value, options) => {
+export function withQueryParam(
+	name: string,
+	value: QueryParamValue,
+	options?: QueryParamsOptions,
+): MiddlewareExecutor {
 	const arrayFormat = options?.arrayFormat ?? "repeat";
 
 	return (next) => async (input, init) => {
@@ -239,7 +241,7 @@ export const withQueryParam: Middleware<
 
 		return next(reconstructUrl(url, isRelative), init);
 	};
-};
+}
 
 /**
  * Middleware that adds multiple query parameters to outgoing fetch requests.
@@ -331,9 +333,10 @@ export const withQueryParam: Middleware<
  * @see {@link withQueryParam} for setting a single query parameter
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams MDN: URLSearchParams}
  */
-export const withQueryParams: Middleware<
-	[params: QueryParamEntries, options?: QueryParamsOptions]
-> = (params, options) => {
+export function withQueryParams(
+	params: QueryParamEntries,
+	options?: QueryParamsOptions,
+): MiddlewareExecutor {
 	const arrayFormat = options?.arrayFormat ?? "repeat";
 
 	// Fast path: empty params (checked at creation time, not per-request)
@@ -363,4 +366,4 @@ export const withQueryParams: Middleware<
 
 		return next(reconstructUrl(url, isRelative), init);
 	};
-};
+}

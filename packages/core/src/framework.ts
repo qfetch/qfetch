@@ -8,57 +8,34 @@
  * @see {@link https://fetch.spec.whatwg.org/#fetch-method Fetch Standard}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch MDN: fetch()}
  */
-export type FetchFunction = typeof fetch;
+export type FetchFn = typeof fetch;
 
 /**
  * A function that wraps a fetch function with middleware logic.
  *
  * @remarks
- * Executors form the building blocks of the middleware chain. Each executor receives
- * the next function in the chain and returns a new fetch function with its logic applied.
- * This pattern enables request/response interception, transformation, and error handling.
+ * Middleware executors form the building blocks of the middleware chain. Each executor
+ * receives the next function in the chain and returns a new fetch function with its
+ * logic applied. This pattern enables request/response interception, transformation,
+ * and error handling.
  *
  * @param next - The next fetch function in the middleware chain
  * @returns A new fetch function with the middleware applied
- */
-export type FetchExecutor = (next: FetchFunction) => FetchFunction;
-
-/**
- * A middleware factory that creates a {@link FetchExecutor}.
- *
- * @remarks
- * The generic parameter `T` is a tuple type representing the middleware arguments:
- * - `Middleware` (no generic) - no arguments, call with `()`
- * - `Middleware<[opts: Options]>` - single required argument
- * - `Middleware<[opts?: Options]>` - single optional argument
- * - `Middleware<[name: string, value: string]>` - multiple positional arguments
- * - `Middleware<[name: string, opts?: Options]>` - mixed required and optional
- *
- * Named tuple labels provide documentation for argument names.
- *
- * @template T - Tuple type representing the middleware arguments
  *
  * @example
  * ```ts
- * // No arguments
- * const withLogger: Middleware = () => (next) => (input, init) => {
- *   console.log("Request:", input);
- *   return next(input, init);
- * };
- *
- * // Single argument
- * const withBaseUrl: Middleware<[baseUrl: string | URL]> = (baseUrl) => ...
- *
- * // Multiple arguments
- * const withHeader: Middleware<[name: string, value: string]> = (name, value) => ...
- *
- * // Optional arguments
- * const withTimeout: Middleware<[ms: number, opts?: TimeoutOptions]> = (ms, opts?) => ...
+ * // A simple logging middleware
+ * function withLogger(): MiddlewareExecutor {
+ *   return (next) => async (input, init) => {
+ *     console.log("Request:", input);
+ *     const response = await next(input, init);
+ *     console.log("Response:", response.status);
+ *     return response;
+ *   };
+ * }
  * ```
  */
-export type Middleware<T extends unknown[] = []> = (
-	...args: T
-) => FetchExecutor;
+export type MiddlewareExecutor = (next: FetchFn) => FetchFn;
 
 /**
  * Composes middleware executors in right-to-left order (functional composition).
@@ -77,12 +54,14 @@ export type Middleware<T extends unknown[] = []> = (
  * // Request: logger → retry → fetch
  * ```
  */
-export const compose = (...middlewares: FetchExecutor[]): FetchExecutor => {
-	return (baseFetch: FetchFunction): FetchFunction => {
+export function compose(
+	...middlewares: MiddlewareExecutor[]
+): MiddlewareExecutor {
+	return (baseFetch: FetchFn): FetchFn => {
 		// Build the chain from right to left (last middleware wraps base fetch)
 		return middlewares.reduce((next, current) => current(next), baseFetch);
 	};
-};
+}
 
 /**
  * Composes middleware executors in left-to-right order (pipeline style).
@@ -101,9 +80,11 @@ export const compose = (...middlewares: FetchExecutor[]): FetchExecutor => {
  * // Request: logger → retry → fetch
  * ```
  */
-export const pipeline = (...middlewares: FetchExecutor[]): FetchExecutor => {
-	return (baseFetch: FetchFunction): FetchFunction => {
+export function pipeline(
+	...middlewares: MiddlewareExecutor[]
+): MiddlewareExecutor {
+	return (baseFetch: FetchFn): FetchFn => {
 		// Build the chain from left to right (first middleware wraps base fetch)
 		return middlewares.reduceRight((next, current) => current(next), baseFetch);
 	};
-};
+}
