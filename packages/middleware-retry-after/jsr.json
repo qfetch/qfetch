@@ -2,6 +2,9 @@
 	"name": "@qfetch/middleware-retry-after",
 	"version": "0.1.0",
 	"exports": "./src/index.ts",
+	"imports": {
+		"@proventuslabs/retry-strategies": "jsr:@proventuslabs/retry-strategies@0.1"
+	},
 	"publish": {
 		"exclude": [
 			"src/**/*test.ts",
