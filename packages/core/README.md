@@ -15,15 +15,17 @@ npm install @qfetch/core
 ## Quick Start
 
 ```typescript
-import { compose, pipeline, type Middleware } from '@qfetch/core';
+import { compose, pipeline, type MiddlewareExecutor } from '@qfetch/core';
 
 // Create a simple logging middleware
-const withLogger: Middleware = () => (next) => async (input, init) => {
-  console.log('Request:', input);
-  const response = await next(input, init);
-  console.log('Response:', response.status);
-  return response;
-};
+function withLogger(): MiddlewareExecutor {
+  return (next) => async (input, init) => {
+    console.log('Request:', input);
+    const response = await next(input, init);
+    console.log('Response:', response.status);
+    return response;
+  };
+}
 
 // Compose middlewares (right-to-left execution)
 const qfetch = compose(
