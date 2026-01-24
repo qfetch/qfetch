@@ -62,6 +62,7 @@ npm install @qfetch/core @qfetch/middleware-base-url
 | [@qfetch/middleware-base-url](packages/middleware-base-url) | Base URL resolution using standard URL constructor |
 | [@qfetch/middleware-headers](packages/middleware-headers) | Default headers for requests |
 | [@qfetch/middleware-query-params](packages/middleware-query-params) | Query parameters for request URLs |
+| [@qfetch/middleware-response-error](packages/middleware-response-error) | Throw errors based on HTTP response status codes |
 | [@qfetch/middleware-retry-after](packages/middleware-retry-after) | Server-directed retry timing (Retry-After header) |
 | [@qfetch/middleware-retry-status](packages/middleware-retry-status) | Client-controlled retry based on status codes |
 
