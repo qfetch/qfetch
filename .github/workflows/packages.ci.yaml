@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   detect-changes:
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     timeout-minutes: 5
     runs-on: ubuntu-24.04
     outputs:
