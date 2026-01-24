@@ -7,5 +7,6 @@
   "packages/middleware-response-error": "0.1.0",
   "packages/middleware-retry-after": "0.1.1",
   "packages/middleware-retry-status": "0.1.0",
-  "packages/middlewares": "0.1.0"
+  "packages/middlewares": "0.1.0",
+  "packages/qfetch": "0.1.0"
 }
