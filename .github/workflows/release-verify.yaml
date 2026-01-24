@@ -16,11 +16,11 @@ jobs:
       - name: Extract package info from branch
         id: extract
         run: |
-          # Branch format: release-please--branches--main--components--packages-<package-name>
+          # Branch format: release-please--branches--main--components--<package-name>
           BRANCH="${{ github.head_ref }}"
 
-          # Extract package directory name (e.g., "middleware-retry-after" from "packages-middleware-retry-after")
-          PACKAGE_DIR=$(echo "$BRANCH" | sed 's/.*--packages-//')
+          # Extract package directory name (e.g., "middleware-response-error")
+          PACKAGE_DIR=$(echo "$BRANCH" | sed 's/.*--components--//')
 
           echo "package_path=packages/$PACKAGE_DIR" >> "$GITHUB_OUTPUT"
           echo "package_name=@qfetch/$PACKAGE_DIR" >> "$GITHUB_OUTPUT"
