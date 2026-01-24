@@ -142,3 +142,20 @@ jobs:
       package_path: "packages/middlewares"
       package_name: "@qfetch/middlewares"
       package_tag: ${{ needs.release-please.outputs['packages/middlewares--tag_name'] }}
+
+  documentation:
+    needs: release-please
+    if: >-
+      ${{
+        needs.release-please.outputs['packages/core--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/middleware-retry-after--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/middleware-retry-status--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/middleware-base-url--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/middleware-authorization--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/middleware-query-params--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/middleware-headers--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/middleware-response-error--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/qfetch--release_created'] == 'true' ||
+        needs.release-please.outputs['packages/middlewares--release_created'] == 'true'
+      }}
+    uses: ./.github/workflows/docs.yaml
